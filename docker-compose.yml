@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: hermes
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: hermes_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  app:
+    build: .
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://hermes:pass@db:5432/hermes_db"
+    depends_on:
+      - db
