@@ -2,8 +2,8 @@ import os
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
-from database.models import Base, Message, Identity, Contact
-from core.crypto import CryptoManager
+from app.database.models import Base, Message, Identity, Contact
+from app.core.crypto import CryptoManager
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
@@ -51,26 +51,68 @@ class DBManager:
                 await session.commit()
                 return new_msg
 
-    async def get_or_create_identity(self, name: str):
+    async def create_new_identity(self, name: str, password: str):
+        crypto = CryptoManager()
+
+        encrypted_key, salt, nonce = crypto.encrypt_private_key(password)
+
         async with self.session_factory() as session:
             async with session.begin():
-                result = await session.execute(sa.select(Identity))
+                identity = Identity(
+                    display_name=name,
+                    public_key=crypto.public_key_bytes,
+                    private_key_encrypted=encrypted_key,
+                    key_salt=salt,
+                    key_nonce=nonce,
+                )
+                session.add(identity)
+                await session.commit()
+                print(f"[DB] Профиль {name} создан!")
+                return crypto
+
+    async def get_all_identities(self):
+        """Возвращает список всех созданных профилей."""
+        async with self.session_factory() as session:
+            import sqlalchemy as sa
+
+            result = await session.execute(sa.select(Identity.display_name))
+            return result.scalars().all()
+
+    async def get_identity_by_name(self, name: str):
+        """Находит профиль по имени."""
+        async with self.session_factory() as session:
+            async with session.begin():
+                result = await session.execute(
+                    sa.select(Identity).filter_by(display_name=name)
+                )
                 identity = result.scalars().first()
-
-                if not identity:
-                    print("[DB] Создаю новый профиль пользователя...")
-                    crypto = CryptoManager()
-
-                    identity = Identity(
-                        display_name=name,
-                        public_key=crypto.public_key_bytes,
-                        private_key_encrypted=crypto.private_key_bytes,
-                    )
-                    session.add(identity)
-                    await session.commit()
-                    print(f"[DB] Профиль {name} создан!")
-
                 return identity
+
+    async def unlock_identity(self, target_name: str, password: str):
+        """Проверяет пароль и возвращает объект CryptoManager."""
+        async with self.session_factory() as session:
+            result = await session.execute(
+                sa.select(Identity).filter_by(display_name=target_name)
+            )
+            identity = result.scalars().first()
+
+            if not identity:
+                print("Профиль не найден! Сначала создай его.")
+                return None
+
+            crypto = CryptoManager.decrypt_private_key(
+                encrypted_key=identity.private_key_encrypted,
+                password=password,
+                salt=identity.key_salt,
+                nonce=identity.key_nonce,
+            )
+
+            if crypto:
+                print(f"Добро пожаловать, {identity.display_name}!")
+                return crypto
+            else:
+                print("Неверный мастер-пароль!")
+                return None
 
     async def get_or_create_contact(
         self, id: int, alias: str, public_key: bytes, onion_address: str
@@ -93,27 +135,3 @@ class DBManager:
                     await session.commit()
                     print(f"[DB] Контакт {alias} создан!")
                 return contact
-
-    async def unlock_identity(self, password: str):
-        """Проверяет пароль и возвращает объект CryptoManager."""
-        async with self.session_factory() as session:
-            result = await session.execute(sa.select(Identity))
-            identity = result.scalars().first()
-
-            if not identity:
-                print("Профиль не найден! Сначала создай его.")
-                return None
-
-            crypto = CryptoManager.decrypt_private_key(
-                encrypted_key=identity.private_key_encrypted,
-                password=password,
-                salt=identity.key_salt,
-                nonce=identity.key_nonce,
-            )
-
-            if crypto:
-                print(f"Добро пожаловать, {identity.display_name}!")
-                return crypto
-            else:
-                print("Неверный мастер-пароль!")
-                return None

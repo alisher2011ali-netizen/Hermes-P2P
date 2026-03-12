@@ -2,6 +2,7 @@ import nacl.utils
 from nacl.public import PrivateKey, PublicKey, Box
 from nacl.signing import SigningKey, VerifyKey
 from nacl.secret import SecretBox
+from nacl.pwhash.argon2id import kdf, OPSLIMIT_MODERATE, MEMLIMIT_MODERATE, SALTBYTES
 from typing import Tuple, Optional
 
 
@@ -58,17 +59,17 @@ class CryptoManager:
     @staticmethod
     def derive_key_from_password(password: str, salt: bytes) -> bytes:
         """Генерирует криптографический ключ из обычного пароля (Argon2id)."""
-        return nacl.pwhash.argon2id.kdf(
+        return kdf(
             SecretBox.KEY_SIZE,
             password.encode("utf-8"),
             salt,
-            opslimit=nacl.pwhash.argon2id.OPSLIMIT_MODERATE,
-            memlimit=nacl.pwhash.argon2id.MEMLIMIT_MODERATE,
+            opslimit=OPSLIMIT_MODERATE,
+            memlimit=MEMLIMIT_MODERATE,
         )
 
     def encrypt_private_key(self, password: str) -> Tuple[bytes, bytes]:
         """Шифрует приватный ключ мастер-паролем."""
-        salt = nacl.utils.random(nacl.pwhash.argon2id.SALTBYTES)
+        salt = nacl.utils.random(SALTBYTES)
         key = self.derive_key_from_password(password, salt)
 
         box = SecretBox(key)
@@ -78,6 +79,7 @@ class CryptoManager:
 
         return encrypted.ciphertext, salt, nonce
 
+    @classmethod
     def decrypt_private_key(
         cls, encrypted_key: bytes, password: str, salt: bytes, nonce: bytes
     ):

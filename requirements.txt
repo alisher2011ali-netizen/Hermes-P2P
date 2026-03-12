@@ -1,0 +1,14 @@
+# База данных и асинхронность
+sqlalchemy[asyncio]
+asyncpg
+greenlet
+
+# Криптография
+pynacl
+
+# Сеть и Tor (подготовка)
+stem
+aiohttp
+
+# Окружение
+python-dotenv
