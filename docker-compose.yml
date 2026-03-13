@@ -14,6 +14,18 @@ services:
     ports:
       - "5432:5432"
 
+  tor:
+    image: osminogin/tor-simple
+    container_name: hermes_tor
+    restart: always
+    environment:
+      - TOR_CONTROL_PORT=9051
+      - TOR_CONTROL_PASS=
+    ports:
+      - "9050:9050"
+      - "9051:9051"
+    command: tor --ControlPort 0.0.0.0:9051 --AllowDotExit 1 --SocksPort 0.0.0.0:9050 --CookieAuthentication 0
+
   app:
     build:
       context: .
@@ -23,6 +35,7 @@ services:
       DATABASE_URL: "postgresql+asyncpg://hermes:pass@db:5432/hermes_db"
       PYTHONPATH: "/src"
     depends_on:
+      - tor
       - db
     stdin_open: true
     tty: true
