@@ -30,8 +30,8 @@ class AuthService:
         name = input("Введите имя: ")
         password = getpass.getpass("Придумайте мастер-пароль: ")
 
-        crypto = await self.db.create_new_identity(name, password)
-        return crypto
+        result = await self.db.create_new_identity(name, password)
+        return result
 
     async def _login_flow(self, users):
         print("\n[Вход в систему]")
@@ -41,5 +41,5 @@ class AuthService:
         target_name = input("Имя пользователя: ")
         password = getpass.getpass(f"Пароль для {target_name}: ")
 
-        crypto = await self.db.unlock_identity(target_name, password)
-        return crypto
+        result = await self.db.unlock_identity(target_name, password)
+        return result

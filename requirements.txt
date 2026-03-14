@@ -8,7 +8,9 @@ pynacl
 
 # Сеть и Tor (подготовка)
 stem
-aiohttp
+fastapi
+uvicorn[standard]
+httpx
 
 # Окружение
 python-dotenv

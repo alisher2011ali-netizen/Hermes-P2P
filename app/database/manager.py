@@ -68,7 +68,7 @@ class DBManager:
                 session.add(identity)
                 await session.commit()
                 print(f"[DB] Профиль {name} создан!")
-                return crypto
+                return identity, crypto
 
     async def get_all_identities(self):
         """Возвращает список всех созданных профилей."""
@@ -89,7 +89,7 @@ class DBManager:
                 return identity
 
     async def unlock_identity(self, target_name: str, password: str):
-        """Проверяет пароль и возвращает объект CryptoManager."""
+        """Проверяет пароль и возвращает объект Identity, объект CryptoManager."""
         async with self.session_factory() as session:
             result = await session.execute(
                 sa.select(Identity).filter_by(display_name=target_name)
@@ -109,7 +109,7 @@ class DBManager:
 
             if crypto:
                 print(f"Добро пожаловать, {identity.display_name}!")
-                return crypto
+                return identity, crypto
             else:
                 print("Неверный мастер-пароль!")
                 return None
@@ -135,3 +135,28 @@ class DBManager:
                     await session.commit()
                     print(f"[DB] Контакт {alias} создан!")
                 return contact
+
+    async def save_tor_private_key(self, name: str, tor_private_key: str):
+        async with self.session_factory() as session:
+            async with session.begin():
+                query = (
+                    sa.update(Identity)
+                    .where(Identity.display_name == name)
+                    .values(tor_private_key=tor_private_key)
+                )
+
+                result = await session.execute(query)
+
+                if result.rowcount == 0:
+                    print(f"[DB] Ошибка: Пользователь с именем {name} не найден.")
+                else:
+                    print(f"[DB] Tor-ключ успешно сохранен для {name}.")
+
+    async def get_private_key_encypted(self, name: str):
+        async with self.session_factory() as session:
+            async with session.begin():
+                result = await session.execute(
+                    sa.select(Identity).filter_by(display_name=name)
+                )
+                identity = result.scalars().first()
+                return identity.private_key_encrypted

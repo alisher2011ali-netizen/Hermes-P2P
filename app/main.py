@@ -7,10 +7,15 @@ from app.network.tor_manager import TorManager
 
 async def main():
     db = DBManager()
-    await db.init_db()
+    while True:
+        try:
+            await db.init_db()
+            break
+        except Exception as e:
+            print(e)
 
     auth = AuthService(db)
-    crypto = await auth.run_auth_flow()
+    identity, crypto = await auth.run_auth_flow()
 
     if not crypto:
         print("Авторизация не удалась. Выход.")
@@ -22,7 +27,7 @@ async def main():
 
     tor = TorManager(host="tor")
     await tor.connect()
-    onion_addr = await tor.create_hidden_service(local_port=8080)
+    onion_addr = await tor.setup_identity_tor(name=identity.display_name, db=db)
 
 
 if __name__ == "__main__":

@@ -24,7 +24,12 @@ services:
     ports:
       - "9050:9050"
       - "9051:9051"
-    command: tor --ControlPort 0.0.0.0:9051 --AllowDotExit 1 --SocksPort 0.0.0.0:9050 --CookieAuthentication 0
+    command: >
+      tor --ControlPort 0.0.0.0:9051
+      --SocksPort 0.0.0.0:9050
+      --DataDirectory /var/lib/tor
+      --AllowDotExit 1      
+      --HashedControlPassword "16:04DE70D3AAF07FEA60AFEA33FF2B855A8DED0D061908AFE72FF685BB6A"
 
   app:
     build:
@@ -34,6 +39,7 @@ services:
     environment:
       DATABASE_URL: "postgresql+asyncpg://hermes:pass@db:5432/hermes_db"
       PYTHONPATH: "/src"
+      TOR_PASSWORD: ${TOR_PASSWORD}
     depends_on:
       - tor
       - db

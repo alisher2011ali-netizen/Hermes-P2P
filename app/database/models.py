@@ -27,6 +27,7 @@ class Identity(Base):
     private_key_encrypted: Mapped[bytes] = mapped_column(LargeBinary)
     key_salt: Mapped[bytes] = mapped_column(LargeBinary)
     key_nonce: Mapped[bytes] = mapped_column(LargeBinary)
+    tor_private_key: Mapped[str] = mapped_column(String(100), nullable=True)
     onion_address: Mapped[str] = mapped_column(String(100), nullable=True)
 
 

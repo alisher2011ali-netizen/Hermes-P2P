@@ -94,3 +94,11 @@ class CryptoManager:
             return cls(decrypted_private_bytes)
         except Exception:
             return None
+
+    def get_signature_by_private_key(self, private_key_bytes: bytes, message: str):
+        """Создает цифровую подпись для сообщения."""
+        signing_key = SigningKey(private_key_bytes)
+        message_bytes = message.encode("utf-8")
+        signature = signing_key.sign(message_bytes).signature
+
+        return signature
