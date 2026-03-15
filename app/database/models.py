@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import (
     BigInteger,
     Column,
@@ -22,9 +22,12 @@ class Identity(Base):
     __tablename__ = "identity"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    display_name: Mapped[str] = mapped_column(String(50))
+    display_name: Mapped[str] = mapped_column(
+        String(50), onupdate="CASCADE", unique=True
+    )
     public_key: Mapped[bytes] = mapped_column(LargeBinary, unique=True)
-    private_key_encrypted: Mapped[bytes] = mapped_column(LargeBinary)
+    verify_key: Mapped[bytes] = mapped_column(LargeBinary)
+    encrypted_keys: Mapped[bytes] = mapped_column(LargeBinary)
     key_salt: Mapped[bytes] = mapped_column(LargeBinary)
     key_nonce: Mapped[bytes] = mapped_column(LargeBinary)
     tor_private_key: Mapped[str] = mapped_column(String(100), nullable=True)
@@ -37,11 +40,21 @@ class Contact(Base):
     __tablename__ = "contacts"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    profile: Mapped[str] = mapped_column(
+        ForeignKey("identity.display_name"), index=True
+    )
     alias: Mapped[str] = mapped_column(String(100))
     public_key: Mapped[bytes] = mapped_column(LargeBinary, unique=True)
+    verify_key: Mapped[bytes] = mapped_column(LargeBinary)
     onion_address: Mapped[str] = mapped_column(String(100), nullable=False)
     is_trusted: Mapped[bool] = mapped_column(Boolean, default=False)
-    added_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    added_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.now(timezone.utc)
+    )
+    last_seen: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.now(timezone.utc)
+    )
+    status: Mapped[str] = mapped_column(String(20), default="pending")
 
     messages = relationship("Message", back_populates="contact")
 
@@ -52,14 +65,20 @@ class Message(Base):
     __tablename__ = "messages"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    sender_name: Mapped[str] = mapped_column(String(50))
     contact_id: Mapped[int] = mapped_column(
         ForeignKey("contacts.id", ondelete="CASCADE")
     )
-    is_outbox: Mapped[bool] = mapped_column(Boolean)
     encrypted_content: Mapped[bytes] = mapped_column(LargeBinary)
     nonce: Mapped[bytes] = mapped_column(LargeBinary)
-    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    signature: Mapped[bytes] = mapped_column(LargeBinary, nullable=True)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.now(timezone.utc)
+    )
     is_delivered: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_outbox: Mapped[bool] = mapped_column(Boolean)
+    is_read: Mapped[bool] = mapped_column(Boolean)
+    error_log: Mapped[str] = mapped_column(Text, nullable=True)
 
     contact = relationship("Contact", back_populates="messages")
 

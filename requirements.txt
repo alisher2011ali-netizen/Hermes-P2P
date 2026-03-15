@@ -10,7 +10,7 @@ pynacl
 stem
 fastapi
 uvicorn[standard]
-httpx
+httpx[socks]
 
 # Окружение
 python-dotenv

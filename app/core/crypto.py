@@ -9,21 +9,39 @@ from typing import Tuple, Optional
 class CryptoManager:
     """Управление ключами, E2EE шифрованием и цифровыми подписями."""
 
-    def __init__(self, private_key_bytes: Optional[bytes] = None):
+    def __init__(
+        self,
+        private_key_bytes: Optional[bytes] = None,
+        signing_key_bytes: Optional[bytes] = None,
+    ):
         if private_key_bytes:
             self._private_key = PrivateKey(private_key_bytes)
         else:
             self._private_key = PrivateKey.generate()
 
+        if signing_key_bytes:
+            self._signing_key = SigningKey(signing_key_bytes)
+        else:
+            self._signing_key = SigningKey.generate()
+
         self.public_key = self._private_key.public_key
+        self.verify_key = self._signing_key.verify_key
 
     @property
     def private_key_bytes(self) -> bytes:
         return bytes(self._private_key)
 
     @property
+    def signing_key_bytes(self) -> bytes:
+        return bytes(self._signing_key)
+
+    @property
     def public_key_bytes(self) -> bytes:
         return bytes(self.public_key)
+
+    @property
+    def verify_key_bytes(self) -> bytes:
+        return bytes(self.verify_key)
 
     def encrypt_for(
         self, recipient_public_key_bytes: bytes, message: str
@@ -67,38 +85,38 @@ class CryptoManager:
             memlimit=MEMLIMIT_MODERATE,
         )
 
-    def encrypt_private_key(self, password: str) -> Tuple[bytes, bytes]:
-        """Шифрует приватный ключ мастер-паролем."""
+    def encrypt_all_keys(self, password: str) -> Tuple[bytes, bytes]:
+        """Шифрует приватный ключ и подпись-ключ мастер-паролем."""
         salt = nacl.utils.random(SALTBYTES)
         key = self.derive_key_from_password(password, salt)
-
         box = SecretBox(key)
         nonce = nacl.utils.random(SecretBox.NONCE_SIZE)
 
-        encrypted = box.encrypt(self.private_key_bytes, nonce)
+        combined_keys = bytes(self._private_key) + bytes(self._signing_key)
+
+        encrypted = box.encrypt(combined_keys, nonce)
 
         return encrypted.ciphertext, salt, nonce
 
     @classmethod
-    def decrypt_private_key(
-        cls, encrypted_key: bytes, password: str, salt: bytes, nonce: bytes
+    def decrypt_all_keys(
+        cls, encrypted_blob: bytes, password: str, salt: bytes, nonce: bytes
     ):
-        """Восстанавливает приватный ключ из зашифрованных данных."""
+        """Восстанавливает приватный ключ и подпись-ключ из зашифрованных данных и возвращает объект CryptoManager."""
 
         key = cls.derive_key_from_password(password, salt)
-
         box = SecretBox(key)
 
         try:
-            decrypted_private_bytes = box.decrypt(encrypted_key, nonce)
-            return cls(decrypted_private_bytes)
+            decrypted_combined = box.decrypt(encrypted_blob, nonce)
+
+            priv_bytes = decrypted_combined[:32]
+            sign_bytes = decrypted_combined[32:]
+
+            return cls(private_key_bytes=priv_bytes, signing_key_bytes=sign_bytes)
         except Exception:
-            return None
+            return ValueError("Неверный пароль или поврежденные данные!")
 
-    def get_signature_by_private_key(self, private_key_bytes: bytes, message: str):
+    def sign_message(self, message_hex: str) -> bytes:
         """Создает цифровую подпись для сообщения."""
-        signing_key = SigningKey(private_key_bytes)
-        message_bytes = message.encode("utf-8")
-        signature = signing_key.sign(message_bytes).signature
-
-        return signature
+        return self._signing_key.sign(message_hex.encode("utf-8")).signature
