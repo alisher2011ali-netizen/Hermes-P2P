@@ -60,8 +60,8 @@ class CLIInterface:
         if confirm == "Y" or confirm == "y":
             await self.db.add_contact(
                 alias=c_alias,
-                pub_key=c_pub_key,
-                verify_key=c_verify_key,
+                pub_key=bytes.fromhex(c_pub_key),
+                verify_key=bytes.fromhex(c_verify_key),
                 onion_address=c_onion,
             )
             print("Контакт умпешно создан!")
