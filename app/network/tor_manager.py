@@ -36,26 +36,24 @@ class TorManager:
                 print(f"[Tor] Ожидание запуска Tor... ({e})")
                 await asyncio.sleep(2)
 
-    async def setup_identity_tor(self, name: str, db: DBManager):
-        response = self.controller.create_ephemeral_hidden_service(
-            {80: 8080}, detached=True
-        )
-
-        new_private_key = response.private_key
-        new_onion_address = f"{response.service_id}.onion"
-
-        await db.save_tor_private_key(name, new_private_key)
-
-        return new_onion_address
-
-    async def create_permanent_onion(self, stored_key: str):
+    async def setup_identity_tor(self, stored_key: str = None):
         """
-        Создает ПОСТОЯННЫЙ адрес на основе твоего ключа.
+        Создает onion-адрес на основе ключа, если он есть. В противном случае создается новый ключ.
         """
         try:
+            if stored_key:
+                response = self.controller.create_ephemeral_hidden_service(
+                    {80: 8080}, key_content=stored_key, detached=True
+                )
+                return f"{response.service_id}.onion"
+
             response = self.controller.create_ephemeral_hidden_service(
-                {80: 8080}, key_content=stored_key, detached=True
+                {80: 8080}, detached=True
             )
-            return f"{response.service_id}.onion"
+
+            new_private_key = response.private_key
+            new_onion_address = f"{response.service_id}.onion"
+
+            return new_private_key, new_onion_address
         except Exception as e:
             print(f"[Tor] Ошибка запуска с ключом: {e}")

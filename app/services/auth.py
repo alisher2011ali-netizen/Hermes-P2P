@@ -35,8 +35,8 @@ class AuthService:
 
     async def _login_flow(self, users):
         print("\n[Вход в систему]")
-        for i, name in enumerate(users, 1):
-            print(f"{i}. {name}")
+        for i, user in enumerate(users, 1):
+            print(f"{i}. {user.display_name}")
 
         target_name = input("Имя пользователя: ")
         password = getpass.getpass(f"Пароль для {target_name}: ")

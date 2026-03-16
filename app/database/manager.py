@@ -40,7 +40,7 @@ class DBManager:
         self,
         sender_name: str,
         contact_id: int,
-        content_id: bytes,
+        encrypted_content: bytes,
         nonce: bytes,
         signature_bytes: bytes,
         is_outbox: bool,
@@ -50,7 +50,7 @@ class DBManager:
             async with session.begin():
                 new_msg = Message(
                     sender_name=sender_name,
-                    encypted_content=content_id,
+                    encypted_content=encrypted_content,
                     nonce=nonce,
                     signature=signature_bytes,
                     contact_id=contact_id,
@@ -60,7 +60,9 @@ class DBManager:
                 await session.commit()
                 return new_msg
 
-    async def create_new_identity(self, name: str, password: str):
+    async def create_new_identity(
+        self, name: str, password: str
+    ) -> Tuple[Identity, CryptoManager]:
         crypto = CryptoManager()
 
         encrypted_keys, salt, nonce = crypto.encrypt_all_keys(password)
@@ -80,11 +82,11 @@ class DBManager:
                 print(f"[DB] Профиль {name} создан!")
                 return identity, crypto
 
-    async def get_all_identities(self):
+    async def get_all_identities(self) -> sa.Sequence[Identity]:
         """Возвращает список всех созданных профилей."""
         async with self.session_factory() as session:
             async with session.begin():
-                result = await session.execute(sa.select(Identity.display_name))
+                result = await session.execute(sa.select(Identity))
                 return result.scalars().all()
 
     async def get_identity_by_name(self, name: str):
@@ -141,13 +143,17 @@ class DBManager:
                 print(f"[DB] Контакт {alias} создан!")
                 return contact
 
-    async def save_tor_private_key(self, name: str, tor_private_key: str):
+    async def save_tor_data(
+        self, name: str, tor_private_key: str, onion_address: str
+    ) -> None:
         async with self.session_factory() as session:
             async with session.begin():
                 query = (
                     sa.update(Identity)
                     .where(Identity.display_name == name)
-                    .values(tor_private_key=tor_private_key)
+                    .values(
+                        tor_private_key=tor_private_key, onion_address=onion_address
+                    )
                 )
 
                 result = await session.execute(query)
@@ -155,7 +161,17 @@ class DBManager:
                 if result.rowcount == 0:
                     print(f"[DB] Ошибка: Пользователь с именем {name} не найден.")
                 else:
-                    print(f"[DB] Tor-ключ успешно сохранен для {name}.")
+                    print(f"[DB] Tor-ключ и Onion-адрес успешно сохранены для {name}.")
+
+    async def get_all_contacts_for_once(self, name: str) -> sa.Sequence[Contact]:
+        async with self.session_factory() as session:
+            async with session.begin():
+                result = await session.execute(
+                    sa.select(Contact).filter_by(profile=name)
+                )
+                contacts = result.scalars().all()
+
+                return contacts
 
     async def get_contact_by_id(self, contact_id: int) -> Contact:
         async with self.session_factory() as session:
@@ -167,12 +183,12 @@ class DBManager:
 
                 return contact
 
-    async def get_all_contacts_for_once(self, name: str):
+    async def get_contact_by_onion(self, onion: int) -> Contact:
         async with self.session_factory() as session:
             async with session.begin():
                 result = await session.execute(
-                    sa.select(Contact).filter_by(profile=name)
+                    sa.select(Contact).filter_by(onion_address=onion)
                 )
-                contacts = result.scalars().all()
+                contact = result.scalars().first()
 
-                return contacts
+                return contact
