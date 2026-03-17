@@ -1,18 +1,9 @@
 from fastapi import FastAPI, Request, HTTPException
-from pydantic import BaseModel
 import uvicorn
 
 from app.database.manager import DBManager
 from app.core.crypto import CryptoManager
-from app.services.message_processor import MessageService
-
-
-class MessagePacket(BaseModel):
-    sender_name: str
-    sender_onion: str
-    ciphertext: str
-    nonce: str
-    signature: str
+from app.services.message_processor import MessageService, MessagePacket
 
 
 class P2PNode:
@@ -27,7 +18,7 @@ class P2PNode:
             try:
                 await self.message_service.process_incoming(packet)
                 return {"status": "delivered"}
-            except Exception as e:
+            except Exception:
                 raise HTTPException(status_code=400, detail="Decryption failed")
 
     async def run_server(self):

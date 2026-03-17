@@ -13,12 +13,15 @@ class CLIInterface:
 
     async def run(self):
         while True:
-            if self.current_state == "CHAT_LIST":
-                await self.show_chat_list()
-            elif self.current_state == "ADD_CONTACT":
-                await self.show_add_contact()
-            elif self.current_state == "EXIT":
-                break
+            match self.current_state:
+                case "CHAT_LIST":
+                    await self.show_chat_list()
+                case "ADD_CONTACT":
+                    await self.show_add_contact()
+                case str(s) if s.isdigit():
+                    await self.show_contact_chat()
+                case "EXIT":
+                    break
 
     async def show_chat_list(self):
         contacts = await self.db.get_all_contacts_for_once(self.identity.display_name)
@@ -49,7 +52,7 @@ class CLIInterface:
         c_pub_key = input("Введите публичный ключ контакта.\n> ")
         c_verify_key = input("Введите ключ верификации контакта.\n> ")
         confirm = input(
-            f"Вы уверены, что хотет создать контакт с данными:\n"
+            f"Вы уверены, что хотите создать контакт с данными:\n"
             f"Имя: {c_alias}\n"
             f"Onion-адрес: {c_onion}\n"
             f"Публичный ключ: {c_pub_key}\n"
@@ -64,5 +67,8 @@ class CLIInterface:
                 verify_key=bytes.fromhex(c_verify_key),
                 onion_address=c_onion,
             )
-            print("Контакт умпешно создан!")
-        current_state = "CHAT_LIST"
+            print("Контакт успешно создан!")
+        self.current_state = "CHAT_LIST"
+
+    async def show_contact_chat(self):
+        pass

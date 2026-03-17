@@ -38,7 +38,6 @@ class DBManager:
 
     async def save_message(
         self,
-        sender_name: str,
         contact_id: int,
         encrypted_content: bytes,
         nonce: bytes,
@@ -49,7 +48,6 @@ class DBManager:
         async with self.session_factory() as session:
             async with session.begin():
                 new_msg = Message(
-                    sender_name=sender_name,
                     encypted_content=encrypted_content,
                     nonce=nonce,
                     signature=signature_bytes,
@@ -82,7 +80,7 @@ class DBManager:
                 print(f"[DB] Профиль {name} создан!")
                 return identity, crypto
 
-    async def get_all_identities(self) -> sa.Sequence[Identity]:
+    async def get_all_identities(self) -> list[Identity]:
         """Возвращает список всех созданных профилей."""
         async with self.session_factory() as session:
             async with session.begin():
@@ -163,7 +161,7 @@ class DBManager:
                 else:
                     print(f"[DB] Tor-ключ и Onion-адрес успешно сохранены для {name}.")
 
-    async def get_all_contacts_for_once(self, name: str) -> sa.Sequence[Contact]:
+    async def get_all_contacts_for_once(self, name: str) -> list[Contact]:
         async with self.session_factory() as session:
             async with session.begin():
                 result = await session.execute(

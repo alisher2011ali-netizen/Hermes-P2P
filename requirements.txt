@@ -11,6 +11,7 @@ stem
 fastapi
 uvicorn[standard]
 httpx[socks]
+pydantic
 
 # Окружение
 python-dotenv
