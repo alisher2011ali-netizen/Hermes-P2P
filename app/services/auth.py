@@ -1,11 +1,12 @@
 from app.database.manager import DBManager
-from app.core.crypto import CryptoManager
+from app.network.tor_manager import TorManager
 import getpass
 
 
 class AuthService:
-    def __init__(self, db_manager: DBManager):
+    def __init__(self, db_manager: DBManager, tor: TorManager):
         self.db = db_manager
+        self.tor = tor
 
     async def run_auth_flow(self):
         """Главный цикл выбора: вход или регистрация."""
@@ -30,7 +31,7 @@ class AuthService:
         name = input("Введите имя: ")
         password = getpass.getpass("Придумайте мастер-пароль: ")
 
-        result = await self.db.create_new_identity(name, password)
+        result = await self.db.create_new_identity(name, self.tor, password)
         return result
 
     async def _login_flow(self, users):

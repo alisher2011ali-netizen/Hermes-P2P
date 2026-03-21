@@ -19,13 +19,13 @@ class AppEngine:
     async def setup(self):
         """Вся работа по инициализации здесь"""
         await self.db.init_db()
-        self.auth = AuthService(self.db)
+        await self.tor.connect()
+        self.auth = AuthService(self.db, self.tor)
 
         self.identity, self.crypto = await self.auth.run_auth_flow()
         if not self.crypto:
             return False
 
-        await self.tor.connect()
         self.node = P2PNode(db=self.db, crypto=self.crypto)
         return True
 

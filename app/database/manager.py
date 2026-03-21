@@ -1,10 +1,12 @@
 import os
-from typing import Tuple
+from typing import Tuple, List
+from datetime import datetime
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
 from app.database.models import Base, Message, Identity, Contact
 from app.core.crypto import CryptoManager
+from app.network.tor_manager import TorManager
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
@@ -38,20 +40,24 @@ class DBManager:
 
     async def save_message(
         self,
+        profile: str,
         contact_id: int,
         encrypted_content: bytes,
         nonce: bytes,
         signature_bytes: bytes,
+        timestamp: datetime,
         is_outbox: bool,
     ):
         """Сохраняет зашифрованное сообщение."""
         async with self.session_factory() as session:
             async with session.begin():
                 new_msg = Message(
-                    encypted_content=encrypted_content,
+                    profile=profile,
+                    encrypted_content=encrypted_content,
                     nonce=nonce,
                     signature=signature_bytes,
                     contact_id=contact_id,
+                    timestamp=timestamp,
                     is_outbox=is_outbox,
                 )
                 session.add(new_msg)
@@ -59,11 +65,12 @@ class DBManager:
                 return new_msg
 
     async def create_new_identity(
-        self, name: str, password: str
+        self, name: str, tor: TorManager, password: str
     ) -> Tuple[Identity, CryptoManager]:
         crypto = CryptoManager()
 
         encrypted_keys, salt, nonce = crypto.encrypt_all_keys(password)
+        tor_private_key, onion_address = await tor.setup_identity_tor()
 
         async with self.session_factory() as session:
             async with session.begin():
@@ -74,13 +81,15 @@ class DBManager:
                     encrypted_keys=encrypted_keys,
                     key_salt=salt,
                     key_nonce=nonce,
+                    tor_private_key=tor_private_key,
+                    onion_address=onion_address,
                 )
                 session.add(identity)
                 await session.commit()
                 print(f"[DB] Профиль {name} создан!")
                 return identity, crypto
 
-    async def get_all_identities(self) -> list[Identity]:
+    async def get_all_identities(self) -> List[Identity]:
         """Возвращает список всех созданных профилей."""
         async with self.session_factory() as session:
             async with session.begin():
@@ -126,12 +135,18 @@ class DBManager:
                 return None
 
     async def add_contact(
-        self, alias: str, pub_key: bytes, verify_key: bytes, onion_address: str
+        self,
+        profile: str,
+        alias: str,
+        pub_key: bytes,
+        verify_key: bytes,
+        onion_address: str,
     ) -> Contact:
         async with self.session_factory() as session:
             async with session.begin():
                 contact = Contact(
                     alias=alias,
+                    profile=profile,
                     public_key=pub_key,
                     verify_key=verify_key,
                     onion_address=onion_address,
@@ -161,7 +176,7 @@ class DBManager:
                 else:
                     print(f"[DB] Tor-ключ и Onion-адрес успешно сохранены для {name}.")
 
-    async def get_all_contacts_for_once(self, name: str) -> list[Contact]:
+    async def get_all_contacts_for_once(self, name: str) -> List[Contact]:
         async with self.session_factory() as session:
             async with session.begin():
                 result = await session.execute(
@@ -190,3 +205,15 @@ class DBManager:
                 contact = result.scalars().first()
 
                 return contact
+
+    async def get_messages_by_contact_id(
+        self, profile: str, contact_id: int
+    ) -> List[Message]:
+        async with self.session_factory() as session:
+            async with session.begin():
+                result = await session.execute(
+                    sa.select(Message)
+                    .filter_by(profile=profile, contact_id=contact_id)
+                    .order_by(Message.timestamp)
+                )
+                return result.scalars().all()

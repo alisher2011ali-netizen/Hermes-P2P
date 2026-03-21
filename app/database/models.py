@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from sqlalchemy import (
     BigInteger,
     Column,
@@ -8,6 +8,7 @@ from sqlalchemy import (
     DateTime,
     Boolean,
     Text,
+    func,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -45,14 +46,12 @@ class Contact(Base):
     )
     alias: Mapped[str] = mapped_column(String(100))
     public_key: Mapped[bytes] = mapped_column(LargeBinary, unique=True)
-    verify_key: Mapped[bytes] = mapped_column(LargeBinary)
+    verify_key: Mapped[bytes] = mapped_column(LargeBinary, unique=True)
     onion_address: Mapped[str] = mapped_column(String(100), nullable=False)
     is_trusted: Mapped[bool] = mapped_column(Boolean, default=False)
-    added_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.now(timezone.utc)
-    )
+    added_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     last_seen: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.now(timezone.utc)
+        DateTime, server_default=func.now(), onupdate=func.now
     )
     status: Mapped[str] = mapped_column(String(20), default="pending")
 
@@ -65,18 +64,20 @@ class Message(Base):
     __tablename__ = "messages"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    profile: Mapped[str] = mapped_column(
+        ForeignKey("identity.display_name", ondelete="CASCADE")
+    )
     contact_id: Mapped[int] = mapped_column(
         ForeignKey("contacts.id", ondelete="CASCADE")
     )
     encrypted_content: Mapped[bytes] = mapped_column(LargeBinary)
     nonce: Mapped[bytes] = mapped_column(LargeBinary)
     signature: Mapped[bytes] = mapped_column(LargeBinary, nullable=True)
-    timestamp: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.now(timezone.utc)
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.now())
     is_delivered: Mapped[bool] = mapped_column(Boolean, default=False)
     is_outbox: Mapped[bool] = mapped_column(Boolean)
-    is_read: Mapped[bool] = mapped_column(Boolean)
+    is_read: Mapped[bool] = mapped_column(Boolean, default=False)
     error_log: Mapped[str] = mapped_column(Text, nullable=True)
 
     contact = relationship("Contact", back_populates="messages")

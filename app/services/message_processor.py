@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from datetime import datetime
 
 from app.network.protocol import HermesProtocol
 from app.database.manager import DBManager
@@ -10,6 +11,7 @@ class MessagePacket(BaseModel):
     ciphertext: str
     nonce: str
     signature: str
+    timestamp: str
 
 
 class MessageService:
@@ -28,10 +30,12 @@ class MessageService:
         signature_bytes = bytes.fromhex(packet.signature)
 
         await self.db.save_message(
+            profile=contact.profile,
             contact_id=contact.id,
             encrypted_content=ciphertext_bytes,
             nonce=nonce_bytes,
             signature_bytes=signature_bytes,
+            timestamp=datetime.fromisoformat(packet.timestamp),
             is_outbox=False,
         )
 
@@ -40,7 +44,9 @@ class MessageService:
         if not contact:
             raise Exception("Contact not found")
 
-        await self.protocol.send_payload(target_onion=target_onion, packet=packet)
+        await self.protocol.send_payload(
+            target_onion=target_onion, json=packet.model_dump_json()
+        )
 
         ciphertext_bytes = bytes.fromhex(packet.ciphertext)
         nonce_bytes = bytes.fromhex(packet.nonce)

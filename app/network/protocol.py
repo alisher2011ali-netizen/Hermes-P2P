@@ -1,16 +1,11 @@
 import httpx
 
-from app.database.manager import DBManager
-from app.core.crypto import CryptoManager
-from app.network.p2p_node import MessagePacket
-from app.services.message_processor import MessageService
-
 
 class HermesProtocol:
     def __init__(self, tor_proxy="socks5://tor:9050"):
         self.proxy = tor_proxy
 
-    async def send_payload(self, target_onion: str, packet: MessagePacket):
+    async def send_payload(self, target_onion: str, json: dict):
         """Отправляет данные на чужой .onion адрес"""
 
         limits = httpx.Limits(max_keepalive_connections=5, max_connections=10)
@@ -19,7 +14,7 @@ class HermesProtocol:
         ) as client:
             url = f"http://{target_onion}/receive_message"
             try:
-                response = await client.post(url, json=packet)
+                response = await client.post(url, json=json)
 
                 if response.status_code == 200:
                     print(f"[+] Сообщение для {target_onion} успешно отправлено")

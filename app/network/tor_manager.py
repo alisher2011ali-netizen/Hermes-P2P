@@ -3,8 +3,7 @@ import socket
 from stem.control import Controller
 from stem import Signal
 import os
-
-from app.database.manager import DBManager
+from typing import Tuple, List
 
 
 class TorManager:
@@ -12,9 +11,10 @@ class TorManager:
         self.port = control_port
         self.host = host
         self.controller = None
+        self.private_key = None
         self.onion_address = None
 
-    async def connect(self):
+    async def connect(self) -> None:
         """Подключаемся к контрольному порту Tor."""
         password = os.getenv("TOR_PASSWORD")
 
@@ -36,7 +36,9 @@ class TorManager:
                 print(f"[Tor] Ожидание запуска Tor... ({e})")
                 await asyncio.sleep(2)
 
-    async def setup_identity_tor(self, stored_key: str = None):
+    async def setup_identity_tor(
+        self, stored_key: str = None
+    ) -> Tuple[bytes, str] | str:
         """
         Создает onion-адрес на основе ключа, если он есть. В противном случае создается новый ключ.
         """
@@ -51,9 +53,9 @@ class TorManager:
                 {80: 8080}, detached=True
             )
 
-            new_private_key = response.private_key
-            new_onion_address = f"{response.service_id}.onion"
+            self.private_key = response.private_key
+            self.onion_address = f"{response.service_id}.onion"
 
-            return new_private_key, new_onion_address
+            return self.private_key, self.onion_address
         except Exception as e:
             print(f"[Tor] Ошибка запуска с ключом: {e}")
