@@ -9,6 +9,15 @@ async def main(page: ft.Page):
 
     await engine.initialize_system()
 
+    page.theme = ft.Theme(
+        page_transitions=ft.PageTransitionsTheme(
+            android=ft.PageTransitionTheme.NONE,
+            ios=ft.PageTransitionTheme.NONE,
+            windows=ft.PageTransitionTheme.NONE,
+            linux=ft.PageTransitionTheme.NONE,
+        )
+    )
+
     ui = UIRouter(page)
     await ui.build_ui()
 

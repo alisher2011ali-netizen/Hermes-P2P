@@ -22,11 +22,13 @@ class Identity(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(50), onupdate="CASCADE", unique=True)
+    bio: Mapped[str] = mapped_column(String(200), nullable=True)
     public_key: Mapped[bytes] = mapped_column(LargeBinary, unique=True)
     verify_key: Mapped[bytes] = mapped_column(LargeBinary)
     encrypted_keys: Mapped[bytes] = mapped_column(LargeBinary)
     key_salt: Mapped[bytes] = mapped_column(LargeBinary)
     key_nonce: Mapped[bytes] = mapped_column(LargeBinary)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
 class Contact(Base):
@@ -35,7 +37,8 @@ class Contact(Base):
     __tablename__ = "contacts"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    alias: Mapped[str] = mapped_column(String(100))
+    name: Mapped[str] = mapped_column(String(100))
+    bio: Mapped[str] = mapped_column(String(200), nullable=True)
     public_key: Mapped[bytes] = mapped_column(LargeBinary, unique=True)
     verify_key: Mapped[bytes] = mapped_column(LargeBinary, unique=True)
     is_trusted: Mapped[bool] = mapped_column(Boolean, default=False)

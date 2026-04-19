@@ -8,7 +8,7 @@ from app.database.models.secondary_models import Contact
 def create_chat_tile(contact: Contact, text: str, timestamp: datetime, unread_count):
     c = contact
     avatar = ft.CircleAvatar(
-        content=ft.Text(c.alias[0].upper(), color=ft.Colors.WHITE),
+        content=ft.Text(c.name[0].upper(), color=ft.Colors.WHITE),
         bgcolor=ft.Colors.BLUE_GREY_400,
     )
 
@@ -50,7 +50,7 @@ def create_chat_tile(contact: Contact, text: str, timestamp: datetime, unread_co
 
     title_row = ft.Row(
         [
-            ft.Text(c.alias, weight=ft.FontWeight.BOLD, size=16),
+            ft.Text(c.name, weight=ft.FontWeight.BOLD, size=16),
             ft.Icon(ft.Icons.LOCK, size=14, color=ft.Colors.ON_SURFACE_VARIANT),
         ],
         spacing=4,
@@ -63,5 +63,5 @@ def create_chat_tile(contact: Contact, text: str, timestamp: datetime, unread_co
         trailing=ft.Column(
             trailing_controls, alignment=ft.MainAxisAlignment.CENTER, spacing=4
         ),
-        on_click=lambda e: print(f"Открываем чат: {c.alias}"),
+        on_click=lambda e: print(f"Открываем чат: {c.name}"),
     )

@@ -102,7 +102,7 @@ class CryptoManager:
     def decrypt_all_keys(
         cls, encrypted_blob: bytes, password: str, salt: bytes, nonce: bytes
     ):
-        """Восстанавливает приватный ключ и подпись-ключ из зашифрованных данных и возвращает объект CryptoManager."""
+        """Делает приватный ключ и подпись-ключ из зашифрованных данных и возвращает объект CryptoManager."""
 
         key = cls.derive_key_from_password(password, salt)
         box = SecretBox(key)

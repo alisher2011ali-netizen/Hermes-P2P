@@ -2,20 +2,13 @@ import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func, desc
 from typing import List
-from datetime import datetime
 
 from app.database.models.secondary_models import Contact, Message
 
 
-async def add_contact(
-    session: AsyncSession,
-    alias: str,
-    pub_key: bytes,
-    verify_key: bytes,
-):
-    new_contact = Contact(alias=alias, public_key=pub_key, verify_key=verify_key)
-    session.add(new_contact)
-    return new_contact
+async def add_contact(session: AsyncSession, contact: Contact):
+    session.add(contact)
+    return contact
 
 
 async def get_all_contacts(session: AsyncSession) -> List[Contact]:
