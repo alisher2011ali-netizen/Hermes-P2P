@@ -1,6 +1,8 @@
 import re
 
 
-def is_valid_onion(address: str) -> bool:
-    pattern = r"^[a-z2-7]{56}\.onion$"
-    return bool(re.match(pattern, address.lower()))
+def is_valid_pass(password: str):
+    pattern = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
+    if not re.fullmatch(pattern, password):
+        raise ValueError("Неверный формат пароля")
+    return True

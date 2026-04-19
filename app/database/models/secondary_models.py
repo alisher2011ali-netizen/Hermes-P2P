@@ -1,7 +1,5 @@
 from datetime import datetime
 from sqlalchemy import (
-    BigInteger,
-    Column,
     String,
     LargeBinary,
     ForeignKey,
@@ -23,16 +21,12 @@ class Identity(Base):
     __tablename__ = "identity"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    display_name: Mapped[str] = mapped_column(
-        String(50), onupdate="CASCADE", unique=True
-    )
+    name: Mapped[str] = mapped_column(String(50), onupdate="CASCADE", unique=True)
     public_key: Mapped[bytes] = mapped_column(LargeBinary, unique=True)
     verify_key: Mapped[bytes] = mapped_column(LargeBinary)
     encrypted_keys: Mapped[bytes] = mapped_column(LargeBinary)
     key_salt: Mapped[bytes] = mapped_column(LargeBinary)
     key_nonce: Mapped[bytes] = mapped_column(LargeBinary)
-    tor_private_key: Mapped[str] = mapped_column(String(100), nullable=True)
-    onion_address: Mapped[str] = mapped_column(String(100), nullable=True)
 
 
 class Contact(Base):
@@ -41,17 +35,17 @@ class Contact(Base):
     __tablename__ = "contacts"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    profile: Mapped[str] = mapped_column(
-        ForeignKey("identity.display_name"), index=True
-    )
     alias: Mapped[str] = mapped_column(String(100))
     public_key: Mapped[bytes] = mapped_column(LargeBinary, unique=True)
     verify_key: Mapped[bytes] = mapped_column(LargeBinary, unique=True)
-    onion_address: Mapped[str] = mapped_column(String(100), nullable=False)
     is_trusted: Mapped[bool] = mapped_column(Boolean, default=False)
     added_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    is_online: Mapped[bool] = mapped_column(Boolean, default=False)
     last_seen: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now
+    )
+    last_message_time: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now()
     )
     status: Mapped[str] = mapped_column(String(20), default="pending")
 
@@ -64,13 +58,11 @@ class Message(Base):
     __tablename__ = "messages"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    profile: Mapped[str] = mapped_column(
-        ForeignKey("identity.display_name", ondelete="CASCADE")
-    )
     contact_id: Mapped[int] = mapped_column(
         ForeignKey("contacts.id", ondelete="CASCADE")
     )
-    encrypted_content: Mapped[bytes] = mapped_column(LargeBinary)
+    type_content: Mapped[str] = mapped_column(String, default="TEXT")
+    encrypted_text: Mapped[bytes] = mapped_column(LargeBinary)
     nonce: Mapped[bytes] = mapped_column(LargeBinary)
     signature: Mapped[bytes] = mapped_column(LargeBinary, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
@@ -81,17 +73,3 @@ class Message(Base):
     error_log: Mapped[str] = mapped_column(Text, nullable=True)
 
     contact = relationship("Contact", back_populates="messages")
-
-
-class ProxySettings(Base):
-    """Настройки Tor и мостов."""
-
-    __tablename__ = "proxy_settings"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    proxy_type: Mapped[str] = mapped_column(String(20), default="sock5")
-    host: Mapped[str] = mapped_column(String(100), default="127.0.0.1")
-    port: Mapped[int] = mapped_column(BigInteger, default="9050")
-
-    bridge_config: Mapped[str] = mapped_column(Text, nullable=True)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)

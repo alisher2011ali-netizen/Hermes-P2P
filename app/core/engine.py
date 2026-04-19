@@ -1,39 +1,41 @@
-import asyncio
+from pathlib import Path
 
-from app.database.manager import DBManager
-from app.network.tor_manager import TorManager
-from app.network.p2p_node import P2PNode
-from app.services.auth import AuthService
-from app.ui.console import CLIInterface
+from app.database.manager import init_main_db
+from app.state import state
 
 
 class AppEngine:
     def __init__(self):
-        self.db = DBManager()
-        self.auuth = None
-        self.crypto = None
-        self.identity = None
-        self.tor = TorManager(host="tor")
         self.node = None
+        self.running_tasks = None
 
-    async def setup(self):
-        """Вся работа по инициализации здесь"""
-        await self.db.init_db()
-        await self.tor.connect()
-        self.auth = AuthService(self.db, self.tor)
+    async def initialize_system(self):
+        """Глобальная инициализация при старте программы (до входа)"""
+        data = Path("./data")
+        if not data.exists():
+            data.mkdir(parents=True, exist_ok=True)
+        await init_main_db()
+        print("[Engine] Global system initialized.")
 
-        self.identity, self.crypto = await self.auth.run_auth_flow()
-        if not self.crypto:
-            return False
+    async def start_services(self):
+        """Запуск фоновых служб ПОСЛЕ авторизации"""
+        if not state.is_authenticated:
+            print("[Engine] Error: Cannot start services without authentication.")
+            return
 
-        self.node = P2PNode(db=self.db, crypto=self.crypto)
-        return True
+        print(f"[Engine] Starting services for {state.current_account.name}...")
 
-    async def run(self):
-        """Запуск всех фоновых задач и UI"""
-        server_task = asyncio.create_task(self.node.run_server())
+        # Здесь будет запуск Relay-клиента или P2P ноды
+        # self.node = RelayClient(crypto=state.crypto)
+        # task = asyncio.create_task(self.node.run())
+        # self.running_tasks.append(task)
 
-        ui = CLIInterface(db=self.db, identity=self.identity, crypto=self.crypto)
-        await ui.run()
+        print("[Engine] All services are online.")
 
-        server_task.cancel()
+    async def stop_services(self):
+        """Чистая остановка всех задач"""
+        for task in self.running_tasks:
+            task.cancel()
+
+        state.clear()
+        print("[Engine] Services stopped and state cleared.")

@@ -1,16 +1,17 @@
-import asyncio
+import flet as ft
 
+from app.ui.router import UIRouter
 from app.core.engine import AppEngine
 
 
-async def main():
+async def main(page: ft.Page):
     engine = AppEngine()
 
-    if await engine.setup():
-        await engine.run()
-    else:
-        print("Ошибка запуска приложения.")
+    await engine.initialize_system()
+
+    ui = UIRouter(page)
+    await ui.build_ui()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    ft.run(main=main)

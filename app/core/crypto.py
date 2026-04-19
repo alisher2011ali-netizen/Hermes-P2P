@@ -76,7 +76,7 @@ class CryptoManager:
 
     @staticmethod
     def derive_key_from_password(password: str, salt: bytes) -> bytes:
-        """Генерирует криптографический ключ из обычного пароля (Argon2id)."""
+        """Извлекает криптографический ключ из обычного пароля (Argon2id)."""
         return kdf(
             SecretBox.KEY_SIZE,
             password.encode("utf-8"),

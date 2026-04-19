@@ -1,17 +1,13 @@
 # База данных и асинхронность
 sqlalchemy[asyncio]
-asyncpg
+aiosqlite
 greenlet
 
 # Криптография
 pynacl
 
-# Сеть и Tor (подготовка)
-stem
+# Сеть
 fastapi
 uvicorn[standard]
 httpx[socks]
 pydantic
-
-# Окружение
-python-dotenv

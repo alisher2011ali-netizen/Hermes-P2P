@@ -1,15 +1,14 @@
 from fastapi import FastAPI, Request, HTTPException
 import uvicorn
 
-from app.database.manager import DBManager
 from app.core.crypto import CryptoManager
-from app.services.message_processor import MessageService, MessagePacket
+from app.services.message_service import MessageService, MessagePacket
 
 
 class P2PNode:
-    def __init__(self, db: DBManager, crypto: CryptoManager):
+    def __init__(self, crypto: CryptoManager):
         self.app = FastAPI()
-        self.message_service = MessageService(db, crypto)
+        self.message_service = MessageService(crypto)
         self._setup_routes()
 
     def _setup_routes(self):
