@@ -1,13 +1,10 @@
 # База данных и асинхронность
 sqlalchemy[asyncio]
 aiosqlite
-greenlet
 
 # Криптография
 pynacl
+base58
 
-# Сеть
-fastapi
-uvicorn[standard]
-httpx[socks]
-pydantic
+# Интерфейс
+flet
