@@ -8,6 +8,7 @@ from app.database.models.secondary_models import Contact, Message
 
 async def add_contact(session: AsyncSession, contact: Contact):
     session.add(contact)
+    await session.commit()
     return contact
 
 

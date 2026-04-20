@@ -5,7 +5,9 @@ import flet as ft
 from app.database.models.secondary_models import Contact
 
 
-def create_chat_tile(contact: Contact, text: str, timestamp: datetime, unread_count):
+def create_chat_tile(
+    contact: Contact, text: str, unread_count: int, timestamp: datetime = datetime.now()
+):
     c = contact
     avatar = ft.CircleAvatar(
         content=ft.Text(c.name[0].upper(), color=ft.Colors.WHITE),
@@ -29,9 +31,9 @@ def create_chat_tile(contact: Contact, text: str, timestamp: datetime, unread_co
             ]
         )
 
-    trailing_controls = [
-        ft.Text(timestamp, size=12, color=ft.Colors.ON_SURFACE_VARIANT)
-    ]
+    time = timestamp.strftime("%m.%d, в %H:%M")
+
+    trailing_controls = [ft.Text(time, size=12, color=ft.Colors.ON_SURFACE_VARIANT)]
 
     if unread_count > 0:
         trailing_controls.append(

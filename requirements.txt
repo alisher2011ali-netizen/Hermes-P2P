@@ -11,3 +11,5 @@ flet
 
 # Сеть
 httpx
+fastapi
+pydantic

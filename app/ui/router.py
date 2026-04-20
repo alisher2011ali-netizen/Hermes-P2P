@@ -6,6 +6,7 @@ from app.services.auth_service import AuthService
 from app.services import contact_service
 from app.database.manager import main_session_factory
 from app.database.repositories import accounts, contacts
+from app.database.models.secondary_models import Contact
 from app.ui import provider
 from app.utils import re_validation
 from app.utils import formating
@@ -22,6 +23,7 @@ class UIRouter:
         self.add_contact_container = ft.Column(
             horizontal_alignment=ft.CrossAxisAlignment.CENTER
         )
+        self.selected_contact_id = None
         self.current_nav_index = 0
 
     async def build_ui(self):
@@ -212,21 +214,50 @@ class UIRouter:
             on_change=lambda e: print("Ищем"),
         )
 
-        content = ft.ListView(expand=True, spacing=0, divider_thickness=0.5)
+        chat_list_container = ft.ListView(expand=True, spacing=0, divider_thickness=0.5)
 
         async with state.session_factory() as session:
             data_list = await contacts.get_contacts_with_last_message(session)
 
         for data in data_list:
             tile = await provider.get_chat_tile(data)
-            content.controls.append(tile)
+            chat_list_container.controls.append(tile)
+
+        self.message_view_container = ft.Container(
+            expand=True,
+            content=ft.Column(
+                [
+                    ft.Text(
+                        "Выберите контакт, чтобы начать с ним общение",
+                        size=16,
+                        color=ft.Colors.GREY_500,
+                    )
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+        )
+
+        content = ft.Row(
+            expand=True,
+            spacing=0,
+            controls=[
+                ft.Container(
+                    width=350,
+                    content=ft.Column([search_field, chat_list_container]),
+                    border=ft.border.only(
+                        right=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT)
+                    ),
+                ),
+                ft.Container(expand=True, content=self.message_view_container),
+            ],
+        )
 
         return ft.View(
             route="/chats",
             controls=[
                 ft.AppBar(
                     title=ft.Text("Hermes-P2P", weight="bold"),
-                    bgcolor=ft.Colors.ON_SURFACE_VARIANT,
                     center_title=False,
                     actions=[
                         ft.IconButton(
@@ -244,6 +275,9 @@ class UIRouter:
                 on_click=lambda _: self.page.go("/add-contact"),
             ),
         )
+
+    async def load_chat_history(self, contact: Contact):
+        pass
 
     async def get_profile_view(self):
         identity = state.current_account
