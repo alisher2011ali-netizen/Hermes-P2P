@@ -115,8 +115,8 @@ class CryptoManager:
 
             return cls(private_key_bytes=priv_bytes, signing_key_bytes=sign_bytes)
         except Exception:
-            return ValueError("Неверный пароль или поврежденные данные!")
+            raise ValueError("Неверный пароль или поврежденные данные!")
 
-    def sign_message(self, message_hex: str) -> bytes:
+    def sign_ciphertext(self, ciphertext: bytes) -> bytes:
         """Создает цифровую подпись для сообщения."""
-        return self._signing_key.sign(message_hex.encode("utf-8")).signature
+        return self._signing_key.sign(ciphertext).signature
