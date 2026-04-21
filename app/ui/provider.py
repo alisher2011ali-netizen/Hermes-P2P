@@ -1,5 +1,5 @@
 from app.state import state
-from app.database.models.secondary_models import Contact
+from app.database.models.secondary_models import Contact, Message
 from app.ui import builder
 
 
@@ -22,3 +22,7 @@ async def get_chat_tile(data: list):
     return builder.create_chat_tile(
         contact=contact, text=text, timestamp=timestamp, unread_count=unread_count
     )
+
+
+async def get_message_widjet(pubkey: bytes, msg: Message):
+    return await builder.create_message_widjet(pubkey=pubkey, msg=msg)

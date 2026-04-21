@@ -1,8 +1,8 @@
-from typing import List
 from datetime import datetime
 import flet as ft
 
-from app.database.models.secondary_models import Contact
+from app.database.models.secondary_models import Contact, Message
+from app.state import state
 
 
 def create_chat_tile(
@@ -65,5 +65,35 @@ def create_chat_tile(
         trailing=ft.Column(
             trailing_controls, alignment=ft.MainAxisAlignment.CENTER, spacing=4
         ),
-        on_click=lambda e: print(f"Открываем чат: {c.name}"),
+    )
+
+
+def create_message_widjet(pubkey: bytes, msg: Message):
+    try:
+        text = state.crypto.decrypt_from(
+            sender_public_key_bytes=pubkey,
+            ciphertext=msg.encrypted_text,
+            nonce=msg.nonce,
+        )
+    except Exception:
+        text = "Ошибка расшифровки"
+    alignment = (
+        ft.MainAxisAlignment.END if msg.is_outbox else ft.MainAxisAlignment.START
+    )
+    bgcolor = ft.Colors.BLUE_700 if msg.is_outbox else ft.Colors.ON_SURFACE_VARIANT
+
+    return ft.Row(
+        [
+            ft.Container(
+                content=ft.Text(
+                    text,
+                    color=(ft.Colors.WHITE if msg.is_outbox else ft.Colors.ON_SURFACE),
+                ),
+                padding=12,
+                border_radius=15,
+                bgcolor=bgcolor,
+                width=600,
+            )
+        ],
+        alignment=alignment,
     )

@@ -6,6 +6,7 @@ from app.services.auth_service import AuthService
 from app.services import contact_service
 from app.database.manager import main_session_factory
 from app.database.repositories import accounts, contacts
+from app.database.repositories import messages as messages_repo
 from app.database.models.secondary_models import Contact
 from app.ui import provider
 from app.utils import re_validation
@@ -221,6 +222,9 @@ class UIRouter:
 
         for data in data_list:
             tile = await provider.get_chat_tile(data)
+            tile.on_click = lambda _: asyncio.create_task(
+                self.load_chat_history(data[0])
+            )
             chat_list_container.controls.append(tile)
 
         self.message_view_container = ft.Container(
@@ -244,7 +248,25 @@ class UIRouter:
             controls=[
                 ft.Container(
                     width=350,
-                    content=ft.Column([search_field, chat_list_container]),
+                    content=ft.Column(
+                        [
+                            ft.Container(
+                                ft.Row(
+                                    [
+                                        search_field,
+                                        ft.IconButton(
+                                            icon=ft.Icons.ADD_CIRCLE_OUTLINE,
+                                            on_click=lambda _: self.page.go(
+                                                "/add-contact"
+                                            ),
+                                        ),
+                                    ]
+                                ),
+                                padding=ft.padding.only(right=5),
+                            ),
+                            chat_list_container,
+                        ],
+                    ),
                     border=ft.border.only(
                         right=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT)
                     ),
@@ -265,19 +287,77 @@ class UIRouter:
                         )
                     ],
                 ),
-                search_field,
                 content,
             ],
             navigation_bar=self._get_nav_bar(0),
-            floating_action_button=ft.FloatingActionButton(
-                icon=ft.Icons.ADD,
-                bgcolor=ft.Colors.PRIMARY_CONTAINER,
-                on_click=lambda _: self.page.go("/add-contact"),
-            ),
         )
 
     async def load_chat_history(self, contact: Contact):
-        pass
+        self.message_view_container.content = ft.ProgressBar(width=200, color="blue")
+        self.page.update()
+
+        async with state.session_factory() as session:
+            messages = await messages_repo.get_messages_by_contact_id(
+                session=session, contact_id=contact.id
+            )
+
+        messages_widjets = []
+        for msg in messages:
+            msg_widjet = await provider.get_message_widjet(contact.public_key, msg=msg)
+            messages_widjets.append(msg_widjet)
+
+        c = contact
+        avatar = ft.CircleAvatar(
+            content=ft.Text(c.name[0].upper(), color=ft.Colors.WHITE),
+            bgcolor=ft.Colors.BLUE_GREY_400,
+        )
+
+        if c.is_online:
+            avatar = ft.Stack(
+                [
+                    avatar,
+                    ft.Container(
+                        width=18,
+                        height=18,
+                        bgcolor=ft.Colors.GREEN_500,
+                        border_radius=6,
+                        border=ft.border.all(2, ft.Colors.SURFACE),
+                        alignment=ft.alignment.bottom_right,
+                        bottom=0,
+                        right=0,
+                    ),
+                ]
+            )
+
+        self.message_view_container.content = ft.Column(
+            [
+                ft.Container(
+                    ft.Row(
+                        controls=[avatar, ft.Text(f"{c.name}", weight="bold", size=18)],
+                        spacing=10,
+                    ),
+                    padding=ft.padding.only(left=15, top=5),
+                ),
+                ft.Divider(),
+                ft.ListView(
+                    controls=messages_widjets, expand=True, spacing=10, auto_scroll=True
+                ),
+                ft.Container(
+                    ft.Row(
+                        [
+                            ft.TextField(
+                                hint_text="Сообщение...", expand=True, shift_enter=True
+                            ),
+                            ft.IconButton(
+                                ft.Icons.SEND, on_click=lambda _: print("Отправка...")
+                            ),
+                        ]
+                    ),
+                    padding=ft.padding.only(left=5, right=5),
+                ),
+            ]
+        )
+        self.page.update()
 
     async def get_profile_view(self):
         identity = state.current_account
@@ -399,7 +479,7 @@ class UIRouter:
                 token_input,
                 ft.ElevatedButton(
                     "Добавить",
-                    icon=ft.Icons.PLUS_ONE,
+                    icon=ft.Icons.ADD,
                     on_click=lambda _: asyncio.create_task(
                         self.show_contact_added_dialog(
                             name_input.value, token_input.value
