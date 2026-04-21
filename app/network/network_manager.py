@@ -24,8 +24,8 @@ async def pull_messages():
             )
 
             if response.status_code == 200:
-                messages = response.json()
-                for msg in messages:
+                packets = response.json()
+                for packet in packets:
                     # 1. Проверяем подпись (VerifyKey отправителя)
                     # 2. Расшифровываем (decrypt_from)
                     # 3. Сохраняем в БД и обновляем UI
