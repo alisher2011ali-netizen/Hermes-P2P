@@ -362,9 +362,7 @@ class UIRouter:
     async def get_profile_view(self):
         identity = state.current_account
 
-        token = formating.generate_invite_token(
-            identity.public_key, identity.public_key
-        )
+        token = formating.generate_invite_token(identity.public_key)
 
         async def copy_token(e):
             await self.page.clipboard.set(token)

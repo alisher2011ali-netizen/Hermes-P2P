@@ -1,14 +1,27 @@
 import httpx
 import json
+from pydantic import BaseModel
 import asyncio
 
 from app.state import state
+from app.services.message_service import MessageService
 
 
-async def send_packet(packet: json):
+class MessagePacket(BaseModel):
+    to_pubkey: str
+    from_pubkey: str
+    payload: str
+    nonce: str
+    signature: str
+    timestamp: str
+
+
+async def send_packet(packet: MessagePacket):
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.post(f"{state.relay_url}/send", json=packet)
+            response = await client.post(
+                f"{state.relay_url}/send", json=packet.model_dump()
+            )
 
             if response.status_code == 200:
                 return True
@@ -26,9 +39,7 @@ async def pull_messages():
             if response.status_code == 200:
                 packets = response.json()
                 for packet in packets:
-                    # 1. Проверяем подпись (VerifyKey отправителя)
-                    # 2. Расшифровываем (decrypt_from)
-                    # 3. Сохраняем в БД и обновляем UI
+                    await MessageService.polling_message(packet=packet)
                     pass
 
         await asyncio.sleep(5)

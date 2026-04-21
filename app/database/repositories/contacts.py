@@ -29,6 +29,13 @@ async def get_contact_by_id(session: AsyncSession, contact_id: int) -> Contact:
     return result.scalars().first()
 
 
+async def get_contact_by_pubkey(session: AsyncSession, contact_pubkey: bytes):
+    result = await session.execute(
+        sa.select(Contact).filter_by(public_key=contact_pubkey)
+    )
+    return result.scalars().first()
+
+
 async def get_contacts_with_last_message(
     session: AsyncSession,
 ) -> List:

@@ -35,8 +35,8 @@ class AuthService:
                 raise ValueError("Профиль не найден!")
 
             try:
-                crypto = CryptoManager.decrypt_all_keys(
-                    encrypted_blob=identity.encrypted_keys,
+                crypto = CryptoManager.decrypt_private_key(
+                    encrypted_private_key=identity.encrypted_private_key,
                     password=password,
                     salt=identity.key_salt,
                     nonce=identity.key_nonce,
@@ -63,13 +63,14 @@ class AuthService:
             async with profile_session_factory() as profile_session:
                 crypto = CryptoManager()
 
-                encrypted_keys, salt, nonce = crypto.encrypt_all_keys(password)
+                encrypted_private_key, salt, nonce = crypto.encrypt_private_key(
+                    password
+                )
 
                 identity = Identity(
                     name=name,
                     public_key=crypto.public_key_bytes,
-                    verify_key=crypto.verify_key_bytes,
-                    encrypted_keys=encrypted_keys,
+                    encrypted_private_key=encrypted_private_key,
                     key_salt=salt,
                     key_nonce=nonce,
                 )

@@ -7,3 +7,4 @@ class MessagePacket(BaseModel):
     payload: str
     nonce: str
     signature: str
+    timestamp: str

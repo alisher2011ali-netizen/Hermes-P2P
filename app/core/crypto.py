@@ -1,4 +1,5 @@
 import nacl.utils
+from nacl.encoding import HexEncoder
 from nacl.public import PrivateKey, PublicKey, Box
 from nacl.signing import SigningKey, VerifyKey
 from nacl.secret import SecretBox
@@ -9,39 +10,21 @@ from typing import Tuple, Optional
 class CryptoManager:
     """Управление ключами, E2EE шифрованием и цифровыми подписями."""
 
-    def __init__(
-        self,
-        private_key_bytes: Optional[bytes] = None,
-        signing_key_bytes: Optional[bytes] = None,
-    ):
+    def __init__(self, private_key_bytes: Optional[bytes] = None):
         if private_key_bytes:
             self._private_key = PrivateKey(private_key_bytes)
         else:
             self._private_key = PrivateKey.generate()
 
-        if signing_key_bytes:
-            self._signing_key = SigningKey(signing_key_bytes)
-        else:
-            self._signing_key = SigningKey.generate()
-
         self.public_key = self._private_key.public_key
-        self.verify_key = self._signing_key.verify_key
 
     @property
     def private_key_bytes(self) -> bytes:
         return bytes(self._private_key)
 
     @property
-    def signing_key_bytes(self) -> bytes:
-        return bytes(self._signing_key)
-
-    @property
     def public_key_bytes(self) -> bytes:
         return bytes(self.public_key)
-
-    @property
-    def verify_key_bytes(self) -> bytes:
-        return bytes(self.verify_key)
 
     def encrypt_for(
         self, recipient_public_key_bytes: bytes, message: str
@@ -69,12 +52,6 @@ class CryptoManager:
         return decrypted.decode("utf-8")
 
     @staticmethod
-    def generate_signing_pair() -> Tuple[bytes, bytes]:
-        """Генерирует пару ключей для цифровой подписи (ED25519)."""
-        signing_key = SigningKey.generate()
-        return bytes(signing_key), bytes(signing_key.verify_key)
-
-    @staticmethod
     def derive_key_from_password(password: str, salt: bytes) -> bytes:
         """Извлекает криптографический ключ из обычного пароля (Argon2id)."""
         return kdf(
@@ -85,22 +62,19 @@ class CryptoManager:
             memlimit=MEMLIMIT_MODERATE,
         )
 
-    def encrypt_all_keys(self, password: str) -> Tuple[bytes, bytes]:
+    def encrypt_private_key(self, password: str) -> Tuple[bytes, bytes]:
         """Шифрует приватный ключ и подпись-ключ мастер-паролем."""
         salt = nacl.utils.random(SALTBYTES)
         key = self.derive_key_from_password(password, salt)
         box = SecretBox(key)
         nonce = nacl.utils.random(SecretBox.NONCE_SIZE)
-
-        combined_keys = bytes(self._private_key) + bytes(self._signing_key)
-
-        encrypted = box.encrypt(combined_keys, nonce)
+        encrypted = box.encrypt(self.private_key_bytes, nonce)
 
         return encrypted.ciphertext, salt, nonce
 
     @classmethod
-    def decrypt_all_keys(
-        cls, encrypted_blob: bytes, password: str, salt: bytes, nonce: bytes
+    def decrypt_private_key(
+        cls, encrypted_private_key: bytes, password: str, salt: bytes, nonce: bytes
     ):
         """Делает приватный ключ и подпись-ключ из зашифрованных данных и возвращает объект CryptoManager."""
 
@@ -108,15 +82,17 @@ class CryptoManager:
         box = SecretBox(key)
 
         try:
-            decrypted_combined = box.decrypt(encrypted_blob, nonce)
-
-            priv_bytes = decrypted_combined[:32]
-            sign_bytes = decrypted_combined[32:]
-
-            return cls(private_key_bytes=priv_bytes, signing_key_bytes=sign_bytes)
+            priv_bytes = box.decrypt(encrypted_private_key, nonce)
+            return cls(private_key_bytes=priv_bytes)
         except Exception:
             raise ValueError("Неверный пароль или поврежденные данные!")
 
     def sign_ciphertext(self, ciphertext: bytes) -> bytes:
         """Создает цифровую подпись для сообщения."""
-        return self._signing_key.sign(ciphertext).signature
+        signing_key = SigningKey(self.private_key_bytes)
+        return signing_key.sign(ciphertext).signature
+
+    @classmethod
+    def verify_message(self, message: str, signature: str):
+        verkey = VerifyKey(self.public_key_bytes)
+        return verkey.verify(message, signature, encoder=HexEncoder)
