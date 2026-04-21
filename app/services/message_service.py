@@ -40,3 +40,6 @@ class Message_service:
             "signature": signature.hex(),
         }
         await network_manager.send_packet(packet=packet)
+
+    async def polling_message(self, packet: dict):
+        pass
