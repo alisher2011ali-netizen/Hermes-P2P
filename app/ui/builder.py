@@ -68,26 +68,31 @@ def create_chat_tile(
     )
 
 
-def create_message_widjet(pubkey: bytes, msg: Message):
-    try:
-        text = state.crypto.decrypt_from(
-            sender_public_key_bytes=pubkey,
-            ciphertext=msg.encrypted_text,
-            nonce=msg.nonce,
-        )
-    except Exception:
-        text = "Ошибка расшифровки"
-    alignment = (
-        ft.MainAxisAlignment.END if msg.is_outbox else ft.MainAxisAlignment.START
-    )
-    bgcolor = ft.Colors.BLUE_700 if msg.is_outbox else ft.Colors.ON_SURFACE_VARIANT
+def create_message_widjet(
+    text: str = None,
+    is_outbox: bool = None,
+    *,
+    pubkey: bytes = None,
+    msg: Message = None
+):
+    if msg:
+        try:
+            text = state.crypto.decrypt_from(
+                sender_public_key_bytes=pubkey,
+                ciphertext=msg.encrypted_text,
+                nonce=msg.nonce,
+            )
+        except Exception:
+            text = "Ошибка расшифровки"
+    alignment = ft.MainAxisAlignment.END if is_outbox else ft.MainAxisAlignment.START
+    bgcolor = ft.Colors.BLUE_700 if is_outbox else ft.Colors.GREY_300
 
     return ft.Row(
         [
             ft.Container(
                 content=ft.Text(
                     text,
-                    color=(ft.Colors.WHITE if msg.is_outbox else ft.Colors.ON_SURFACE),
+                    color=(ft.Colors.WHITE if is_outbox else ft.Colors.ON_SURFACE),
                 ),
                 padding=12,
                 border_radius=15,

@@ -4,11 +4,12 @@ import asyncio
 from app.state import state
 from app.services.auth_service import AuthService
 from app.services import contact_service
+from app.services.message_service import MessageService
 from app.database.manager import main_session_factory
 from app.database.repositories import accounts, contacts
 from app.database.repositories import messages as messages_repo
 from app.database.models.secondary_models import Contact
-from app.ui import provider
+from app.ui import provider, builder
 from app.utils import re_validation
 from app.utils import formating
 
@@ -303,7 +304,9 @@ class UIRouter:
 
         messages_widjets = []
         for msg in messages:
-            msg_widjet = await provider.get_message_widjet(contact.public_key, msg=msg)
+            msg_widjet = builder.create_message_widjet(
+                pubkey=contact.public_key, msg=msg
+            )
             messages_widjets.append(msg_widjet)
 
         c = contact
@@ -328,6 +331,22 @@ class UIRouter:
                     ),
                 ]
             )
+        message_input = ft.TextField(
+            hint_text="Сообщение...", expand=True, shift_enter=True
+        )
+
+        async def on_send_click(e):
+            text = message_input.value
+            if not text:
+                return
+
+            # await MessageService.send_message(contact_id=c.id, text=text)
+
+            message_input.value = ""
+            new_widget = builder.create_message_widjet(text, is_outbox=True)
+            messages_widjets.append(new_widget)
+
+            self.page.update()
 
         self.message_view_container.content = ft.Column(
             [
@@ -345,12 +364,8 @@ class UIRouter:
                 ft.Container(
                     ft.Row(
                         [
-                            ft.TextField(
-                                hint_text="Сообщение...", expand=True, shift_enter=True
-                            ),
-                            ft.IconButton(
-                                ft.Icons.SEND, on_click=lambda _: print("Отправка...")
-                            ),
+                            message_input,
+                            ft.IconButton(ft.Icons.SEND, on_click=on_send_click),
                         ]
                     ),
                     padding=ft.padding.only(left=5, right=5),

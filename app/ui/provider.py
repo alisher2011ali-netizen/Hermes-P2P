@@ -12,7 +12,7 @@ async def get_chat_tile(data: list):
             contact=contact, text="", unread_count=unread_count
         )
 
-    text = await state.crypto.decrypt_from(
+    text = state.crypto.decrypt_from(
         sender_public_key_bytes=contact.public_key,
         ciphertext=data[1],
         nonce=data[2],
@@ -22,7 +22,3 @@ async def get_chat_tile(data: list):
     return builder.create_chat_tile(
         contact=contact, text=text, timestamp=timestamp, unread_count=unread_count
     )
-
-
-async def get_message_widjet(pubkey: bytes, msg: Message):
-    return await builder.create_message_widjet(pubkey=pubkey, msg=msg)

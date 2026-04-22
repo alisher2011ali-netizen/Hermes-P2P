@@ -4,7 +4,6 @@ from pydantic import BaseModel
 import asyncio
 
 from app.state import state
-from app.services.message_service import MessageService
 
 
 class MessagePacket(BaseModel):
@@ -38,6 +37,8 @@ async def pull_messages():
 
             if response.status_code == 200:
                 packets = response.json()
+                from app.services.message_service import MessageService
+
                 for packet in packets:
                     await MessageService.polling_message(packet=packet)
                     pass
