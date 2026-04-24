@@ -11,7 +11,7 @@ from app.database.repositories import messages as messages_repo
 from app.database.models.secondary_models import Contact
 from app.ui import provider, builder
 from app.utils import re_validation
-from app.utils import formating
+from app.utils import formatting
 
 
 class UIRouter:
@@ -304,7 +304,7 @@ class UIRouter:
 
         messages_widjets = []
         for msg in messages:
-            msg_widjet = builder.create_message_widjet(
+            msg_widjet = await builder.create_message_widjet(
                 pubkey=contact.public_key, msg=msg
             )
             messages_widjets.append(msg_widjet)
@@ -340,10 +340,10 @@ class UIRouter:
             if not text:
                 return
 
-            # await MessageService.send_message(contact_id=c.id, text=text)
+            await MessageService.send_message(contact_id=c.id, text=text)
 
             message_input.value = ""
-            new_widget = builder.create_message_widjet(text, is_outbox=True)
+            new_widget = await builder.create_message_widjet(text, is_outbox=True)
             messages_widjets.append(new_widget)
 
             self.page.update()
@@ -372,12 +372,13 @@ class UIRouter:
                 ),
             ]
         )
+
         self.page.update()
 
     async def get_profile_view(self):
         identity = state.current_account
 
-        token = formating.generate_invite_token(identity.public_key)
+        token = formatting.generate_invite_token(identity.public_key)
 
         async def copy_token(e):
             await self.page.clipboard.set(token)

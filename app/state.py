@@ -8,6 +8,7 @@ class AppState:
     current_account: Identity = None
     crypto: CryptoManager = None
     session_factory: async_sessionmaker = None
+    relay_url: str = "http:127.0.0.1:8000"
     current_page: str = "login"
     contacts_list: list[Contact] = []
 

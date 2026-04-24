@@ -1,6 +1,7 @@
 # База данных и асинхронность
 sqlalchemy[asyncio]
 aiosqlite
+asyncpg
 
 # Криптография
 pynacl
@@ -12,4 +13,5 @@ flet
 # Сеть
 httpx
 fastapi
+python-multipart
 pydantic

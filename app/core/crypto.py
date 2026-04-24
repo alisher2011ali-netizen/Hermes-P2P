@@ -72,7 +72,7 @@ class CryptoManager:
 
         return encrypted.ciphertext, salt, nonce
 
-    @classmethod
+    @staticmethod
     def decrypt_private_key(
         cls, encrypted_private_key: bytes, password: str, salt: bytes, nonce: bytes
     ):
@@ -92,7 +92,16 @@ class CryptoManager:
         signing_key = SigningKey(self.private_key_bytes)
         return signing_key.sign(ciphertext).signature
 
-    @classmethod
+    @staticmethod
     def verify_message(self, message: str, signature: str):
+        """Проверяет подпись сообщения и возвращает результат проверки."""
         verkey = VerifyKey(self.public_key_bytes)
         return verkey.verify(message, signature, encoder=HexEncoder)
+
+    def get_encrypted_file_and_file_key(self, file_path: str):
+        file_key = nacl.utils.random(SecretBox.KEY_SIZE)
+        box = SecretBox(file_key)
+
+        with open(file_path, "rb") as f:
+            encrypted_file = box.encrypt(f.read())
+        return encrypted_file, file_key

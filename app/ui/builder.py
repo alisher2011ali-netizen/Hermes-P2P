@@ -1,6 +1,8 @@
 from datetime import datetime
 import flet as ft
+import asyncio
 
+from app.database.repositories import messages
 from app.database.models.secondary_models import Contact, Message
 from app.state import state
 
@@ -68,7 +70,7 @@ def create_chat_tile(
     )
 
 
-def create_message_widjet(
+async def create_message_widjet(
     text: str = None,
     is_outbox: bool = None,
     *,
@@ -82,6 +84,10 @@ def create_message_widjet(
                 ciphertext=msg.encrypted_text,
                 nonce=msg.nonce,
             )
+            async with state.session_factory() as session:
+                await messages.update_is_read(
+                    session=session, msg_id=msg.id, value=True
+                )
         except Exception:
             text = "Ошибка расшифровки"
     alignment = ft.MainAxisAlignment.END if is_outbox else ft.MainAxisAlignment.START
