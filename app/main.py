@@ -19,7 +19,7 @@ async def main(page: ft.Page):
             linux=ft.PageTransitionTheme.NONE,
         )
     )
-    page.on_close = network_manager.stop()
+    page.on_close = await network_manager.stop()
 
     ui = UIRouter(page)
     await ui.build_ui()
