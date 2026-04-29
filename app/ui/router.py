@@ -8,8 +8,8 @@ from app.services.message_service import MessageService
 from app.database.manager import main_session_factory
 from app.database.repositories import accounts, contacts
 from app.database.repositories import messages as messages_repo
-from app.database.models.secondary_models import Contact
-from app.ui import provider, builder
+from app.database.models import Contact
+from app.ui import builder
 from app.utils import re_validation
 from app.utils import formatting
 
@@ -25,7 +25,7 @@ class UIRouter:
         self.add_contact_container = ft.Column(
             horizontal_alignment=ft.CrossAxisAlignment.CENTER
         )
-        self.selected_contact_id = None
+        self.current_chat_contact: Contact = None
         self.current_nav_index = 0
 
     async def build_ui(self):
@@ -84,8 +84,28 @@ class UIRouter:
             self.page.go("/profile")
 
     async def get_login_view(self):
-        """Создает View для экрана логина"""
-        self.login_container.controls.clear()
+        """Get the object of class View for login screen."""
+
+        async def show_password_dialog(name: str):
+            """The method for inputting password."""
+            self.login_container.controls.clear()
+
+            async def confirm_login(pass_input: ft.TextField):
+                try:
+                    success = await self.auth_service.login(name, pass_input.value)
+                    if success:
+                        self.page.go("/chats")
+                except ValueError as err:
+                    pass_input.error = str(err)
+                    self.page.update()
+
+            builder.build_password_step(
+                container=self.login_container,
+                name=name,
+                on_confirm=confirm_login,
+                on_back=lambda _: self.page.go("/"),
+            )
+            self.page.update()
 
         async with main_session_factory() as session:
             accounts_list = await accounts.get_all_accounts(session)
@@ -94,127 +114,46 @@ class UIRouter:
             self.page.go("/sign-up")
             return ft.View(route="/", controls=[ft.Text("Перенаправление...")])
 
-        for acc in accounts_list:
-            btn = ft.ListTile(
-                title=ft.Text(acc.display_name),
-                leading=ft.Icon(ft.Icons.PERSON),
-                on_click=lambda e, name=acc.display_name: asyncio.create_task(
-                    self.show_password_dialog(name)
-                ),
-            )
-            self.login_container.controls.append(btn)
-
-        self.login_container.controls.append(
-            ft.TextButton(
-                "Создать новый профиль", on_click=lambda _: self.page.go("/sign-up")
-            )
+        return builder.build_login_view(
+            accounts_list=accounts_list,
+            login_container=self.login_container,
+            on_account_click=show_password_dialog,
+            on_create_new_click=self.page.go,
         )
-
-        return ft.View(
-            route="/",
-            controls=[
-                ft.AppBar(
-                    title=ft.Text("Выберите аккаунт"),
-                    bgcolor=ft.Colors.ON_SURFACE_VARIANT,
-                ),
-                ft.Container(content=self.login_container, padding=20),
-            ],
-        )
-
-    async def show_password_dialog(self, name: str):
-        """Метод для ввода пароля (подменяет содержимое login_container)."""
-        pass_input = ft.TextField(label="Введите пароль", password=True, width=300)
-
-        async def confirm_login(e):
-            try:
-                success = await self.auth_service.login(name, pass_input.value)
-                if success:
-                    self.page.go("/chats")
-            except ValueError as err:
-                pass_input.error = str(err)
-                self.page.update()
-
-        self.login_container.controls.clear()
-        self.login_container.controls.extend(
-            [
-                ft.Text(f"Вход в: {name}", size=20, weight=ft.FontWeight.BOLD),
-                pass_input,
-                ft.ElevatedButton("Войти", on_click=confirm_login),
-                ft.TextButton("Назад", on_click=lambda _: self.page.go("/")),
-            ]
-        )
-        self.page.update()
 
     async def get_sign_up_view(self):
-        """Метод регистрации пользователя"""
-        name_input = ft.TextField(label="Введите имя", width=300)
-        pass_input = ft.TextField(label="Введите пароль", password=True, width=300)
-        pass_format = ft.Text(
-            """Требования к паролю:
-    ▪ Не менее 8 символов.
-    ▪ Только латинские буквы (A-Z, a-z).
-    ▪ Хотя бы одна заглавная буква.
-    ▪ Хотя бы одна цифра.
-    ▪ Хотя бы один спецсимвол из набора: @ $ ! % * ? &.
-    ▪ Без пробелов и русских букв."""
-        )
-        error_text = ft.Text(color=ft.Colors.RED)
+        """The method for user registration."""
+        error_text_ref = ft.Text(color=ft.Colors.RED)
 
-        async def confirm_sign_up(e):
-            error_text.value = ""
+        async def handle_registration(name: str, password: str):
+            error_text_ref.value = ""
             self.page.update()
-
             try:
-                if re_validation.is_valid_pass(pass_input.value):
-                    success = await self.auth_service.sign_up(
-                        name=name_input.value, password=pass_input.value
-                    )
+                if re_validation.is_valid_pass(password):
+                    success = await self.auth_service.sign_up(name, password)
                     if success:
                         self.page.go("/chats")
             except ValueError as err:
-                error_text.value = str(err)
+                error_text_ref.value = str(err)
                 self.page.update()
 
-        return ft.View(
-            route="/sign-up",
-            controls=[
-                ft.AppBar(
-                    title=ft.Text("Регистрация"), bgcolor=ft.Colors.ON_SURFACE_VARIANT
-                ),
-                ft.Container(
-                    content=ft.Column(
-                        [
-                            ft.Text("Регистрация в Hermes-P2P", size=20),
-                            name_input,
-                            pass_input,
-                            pass_format,
-                            error_text,
-                            ft.ElevatedButton(
-                                "Зарегистрироваться", on_click=confirm_sign_up
-                            ),
-                            ft.TextButton(
-                                "Назад", on_click=lambda _: self.page.go("/")
-                            ),
-                        ],
-                        horizontal_alignment=ft.CrossAxisAlignment.BASELINE,
-                    ),
-                    padding=20,
-                ),
-            ],
+        def handle_back():
+            self.page.go("/")
+
+        return builder.build_sign_up_view(
+            on_register_click=handle_registration,
+            on_back_click=handle_back,
+            error_text_ref=error_text_ref,
         )
 
     async def get_chats_view(self):
-        """Страница со списком контактов"""
-        account_name = state.current_account.name if state.current_account else "Гость"
+        """The method get object of class View for user's chats"""
 
-        search_field = ft.TextField(
-            hint_text="Поиск контактов...",
-            prefix_icon=ft.Icons.SEARCH,
-            border_radius=20,
-            height=45,
-            content_padding=10,
-            on_change=lambda e: print("Ищем"),
-        )
+        async def update_ui():
+            await self.load_chat_history(self.current_chat_contact)
+            self.page.update()
+
+        MessageService.on_message_received = update_ui
 
         chat_list_container = ft.ListView(expand=True, spacing=0, divider_thickness=0.5)
 
@@ -222,9 +161,38 @@ class UIRouter:
             data_list = await contacts.get_contacts_with_last_message(session)
 
         for data in data_list:
-            tile = await provider.get_chat_tile(data)
-            tile.on_click = lambda _: asyncio.create_task(
-                self.load_chat_history(data[0])
+            contact: Contact = data[0]
+            payload = data[1]
+            msg_type = data[2]
+            nonce = data[3]
+            timestamp = data[4]
+            unread_count = data[5]
+
+            display_text = ""
+
+            if msg_type == "TEXT":
+                try:
+                    display_text = state.crypto.decrypt_from(
+                        sender_public_key_bytes=contact.public_key,
+                        ciphertext=payload,
+                        nonce=nonce,
+                    )
+                except Exception:
+                    display_text = "⚠ Не удалось расшифровать сообщение"
+            elif msg_type == "MEDIA":
+                display_text == "📁 Медиафайл"
+            else:
+                display_text = "Нет сообщений..."
+
+            tile = builder.create_chat_tile(
+                contact=contact,
+                text=display_text,
+                timestamp=timestamp,
+                unread_count=unread_count,
+            )
+
+            tile.on_click = lambda _, c=contact: asyncio.create_task(
+                self.load_chat_history(c)
             )
             chat_list_container.controls.append(tile)
 
@@ -243,57 +211,15 @@ class UIRouter:
             ),
         )
 
-        content = ft.Row(
-            expand=True,
-            spacing=0,
-            controls=[
-                ft.Container(
-                    width=350,
-                    content=ft.Column(
-                        [
-                            ft.Container(
-                                ft.Row(
-                                    [
-                                        search_field,
-                                        ft.IconButton(
-                                            icon=ft.Icons.ADD_CIRCLE_OUTLINE,
-                                            on_click=lambda _: self.page.go(
-                                                "/add-contact"
-                                            ),
-                                        ),
-                                    ]
-                                ),
-                                padding=ft.padding.only(right=5),
-                            ),
-                            chat_list_container,
-                        ],
-                    ),
-                    border=ft.border.only(
-                        right=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT)
-                    ),
-                ),
-                ft.Container(expand=True, content=self.message_view_container),
-            ],
-        )
-
-        return ft.View(
-            route="/chats",
-            controls=[
-                ft.AppBar(
-                    title=ft.Text("Hermes-P2P", weight="bold"),
-                    center_title=False,
-                    actions=[
-                        ft.IconButton(
-                            ft.Icons.SETTINGS, on_click=lambda _: print("Настройки")
-                        )
-                    ],
-                ),
-                content,
-            ],
-            navigation_bar=self._get_nav_bar(0),
+        return builder.build_chats_view(
+            on_add_contact_click=self.page.go,
+            get_nav_bar=self._get_nav_bar,
+            chat_list_container=chat_list_container,
+            message_view_container=self.message_view_container,
         )
 
     async def load_chat_history(self, contact: Contact):
+        self.current_chat_contact = contact
         self.message_view_container.content = ft.ProgressBar(width=200, color="blue")
         self.page.update()
 

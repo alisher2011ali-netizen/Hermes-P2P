@@ -8,6 +8,9 @@ from sqlalchemy import (
     func,
 )
 from datetime import datetime
+from urllib.parse import quote_plus
+from pathlib import Path
+import asyncio
 
 
 class Base(DeclarativeBase):
@@ -27,6 +30,23 @@ class RelayMessage(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
-DATABASE_URL = "postgresql+asyncpg://:pass@localhost/hermes_db"
+user = "hermes_user"
+password = "alisher2011%"
+host = "localhost"
+db = "hermes_db"
+
+
+DATABASE_URL = f"postgresql+asyncpg://{user}:{quote_plus(password)}@{host}/{db}"
 engine = create_async_engine(DATABASE_URL)
 async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+
+async def init_profile_db():
+    """Инициализирует таблицы."""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    await engine.dispose()
+
+
+asyncio.create_task(init_profile_db())

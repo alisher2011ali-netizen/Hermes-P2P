@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 from typing import List
 
-from app.database.models.secondary_models import Message
+from app.database.models import Message
 
 
 async def save_message(session: AsyncSession, new_msg: Message):

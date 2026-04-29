@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from app.core.crypto import CryptoManager
-from app.database.models.secondary_models import Message
+from app.database.models import Message
 from app.database.repositories import messages
 from app.database.repositories import contacts
 from app.network.network_manager import network_manager
@@ -10,6 +10,8 @@ from app.state import state
 
 
 class MessageService:
+    on_message_received = None
+
     @staticmethod
     async def send_message(contact_id: int, text: str):
         async with state.session_factory() as session:
@@ -24,7 +26,7 @@ class MessageService:
 
         msg = Message(
             contact_id=contact_id,
-            encrypted_text=ciphertext,
+            payload=ciphertext,
             nonce=nonce,
             signature=signature,
             is_outbox=True,
@@ -64,7 +66,7 @@ class MessageService:
         packet = MessagePacket(
             to_pubkey=contact.public_key.hex(),
             from_pubkey=state.crypto.public_key_bytes.hex(),
-            msg_type="media",
+            msg_type="MEDIA",
             payload=encrypted_key.hex(),
             file_id=file_id,
             nonce=nonce.hex,
@@ -92,7 +94,7 @@ class MessageService:
             ):
                 new_msg = Message(
                     contact_id=c.id,
-                    encrypted_text=bytes.fromhex(packet.payload),
+                    payload=bytes.fromhex(packet.payload),
                     nonce=bytes.fromhex(packet.nonce),
                     signature=bytes.fromhex(packet.signature),
                     is_outbox=False,
@@ -100,3 +102,6 @@ class MessageService:
                 )
 
                 await messages.save_message(session=session, new_msg=new_msg)
+
+                if cls.on_message_received:
+                    await cls.on_message_received()

@@ -1,8 +1,7 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from pathlib import Path
 
-from app.database.models.main_models import MainBase, Account
-from app.database.models.secondary_models import Base, Identity, Contact, Message
+from app.database.models import MainBase, Base, Account, Identity, Contact, Message
 
 main_engine = create_async_engine("sqlite+aiosqlite:///./data/main.db")
 main_session_factory = async_sessionmaker(main_engine, expire_on_commit=False)

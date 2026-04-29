@@ -6,9 +6,23 @@ from sqlalchemy import (
     DateTime,
     Boolean,
     Text,
+    Integer,
     func,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+
+class MainBase(DeclarativeBase):
+    pass
+
+
+class Account(MainBase):
+    __tablename__ = "accounts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    display_name: Mapped[str] = mapped_column(String(50), unique=True)
+    db_file_path: Mapped[str] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
 class Base(DeclarativeBase):
@@ -62,8 +76,9 @@ class Message(Base):
     contact_id: Mapped[int] = mapped_column(
         ForeignKey("contacts.id", ondelete="CASCADE")
     )
-    type_content: Mapped[str] = mapped_column(String, default="TEXT")
-    encrypted_text: Mapped[bytes] = mapped_column(LargeBinary)
+    message_type: Mapped[str] = mapped_column(String, default="TEXT")
+    payload: Mapped[bytes] = mapped_column(LargeBinary)
+    file_id: Mapped[int] = mapped_column(Integer, nullable=True)
     nonce: Mapped[bytes] = mapped_column(LargeBinary)
     signature: Mapped[bytes] = mapped_column(LargeBinary, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

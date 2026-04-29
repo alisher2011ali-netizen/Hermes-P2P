@@ -2,7 +2,7 @@ import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Tuple
 
-from app.database.models.secondary_models import Identity
+from app.database.models import Identity
 
 
 async def create_new_identity(

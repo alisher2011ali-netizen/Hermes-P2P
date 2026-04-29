@@ -6,8 +6,7 @@ from app.database.manager import (
     main_session_factory,
     init_profile_db,
 )
-from app.database.models.main_models import Account
-from app.database.models.secondary_models import Identity
+from app.database.models import Account, Identity
 from app.database.repositories import identity as identity_repo
 from app.database.repositories import accounts
 from app.core.crypto import CryptoManager

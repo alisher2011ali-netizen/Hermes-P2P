@@ -28,6 +28,8 @@ class NetworkManager:
 
     async def send_packet(self, packet: MessagePacket) -> bool:
         """Отправляет пакет на Relay-сервер."""
+        if self.client.is_closed:
+            self.client = httpx.AsyncClient(timeout=10.0)
         try:
             response = await self.client.post(
                 f"{state.relay_url}/send", json=packet.model_dump()
@@ -88,6 +90,10 @@ class NetworkManager:
         """Закрывает клиент при выходе."""
         if self._polling_task:
             self._polling_task.cancel()
+            try:
+                await self._polling_task
+            except asyncio.CancelledError:
+                pass
         await self.client.aclose()
 
 

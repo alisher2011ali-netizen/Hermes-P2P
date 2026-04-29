@@ -62,7 +62,7 @@ class CryptoManager:
             memlimit=MEMLIMIT_MODERATE,
         )
 
-    def encrypt_private_key(self, password: str) -> Tuple[bytes, bytes]:
+    def encrypt_private_key(self, password: str) -> Tuple[bytes, bytes, bytes]:
         """Шифрует приватный ключ и подпись-ключ мастер-паролем."""
         salt = nacl.utils.random(SALTBYTES)
         key = self.derive_key_from_password(password, salt)
@@ -72,7 +72,7 @@ class CryptoManager:
 
         return encrypted.ciphertext, salt, nonce
 
-    @staticmethod
+    @classmethod
     def decrypt_private_key(
         cls, encrypted_private_key: bytes, password: str, salt: bytes, nonce: bytes
     ):

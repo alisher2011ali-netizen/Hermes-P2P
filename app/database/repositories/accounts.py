@@ -1,7 +1,7 @@
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database.models.main_models import Account
+from app.database.models import Account
 
 
 async def get_all_accounts(session: AsyncSession):

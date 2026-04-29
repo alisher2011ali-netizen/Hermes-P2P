@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func, desc
 from typing import List
 
-from app.database.models.secondary_models import Contact, Message
+from app.database.models import Contact, Message
 
 
 async def add_contact(session: AsyncSession, contact: Contact):
@@ -42,7 +42,8 @@ async def get_contacts_with_last_message(
     last_msg_subq = sa.select(
         Message.id,
         Message.contact_id,
-        Message.encrypted_text,
+        Message.message_type,
+        Message.payload,
         Message.nonce,
         Message.timestamp,
         func.row_number()
@@ -60,7 +61,8 @@ async def get_contacts_with_last_message(
     stmt = (
         sa.select(
             Contact,
-            last_msg_subq.c.encrypted_text,
+            last_msg_subq.c.payload,
+            last_msg_subq.c.message_type,
             last_msg_subq.c.nonce,
             last_msg_subq.c.timestamp,
             func.coalesce(unread_subq.c.unread_count, 0).label("unread_count"),

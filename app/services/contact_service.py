@@ -1,6 +1,6 @@
 import base58
 
-from app.database.models.secondary_models import Contact
+from app.database.models import Contact
 from app.database.repositories import contacts
 from app.state import state
 

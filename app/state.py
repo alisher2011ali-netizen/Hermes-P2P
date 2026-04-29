@@ -1,16 +1,14 @@
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.core.crypto import CryptoManager
-from app.database.models.secondary_models import Identity, Contact
+from app.database.models import Identity, Contact
 
 
 class AppState:
     current_account: Identity = None
     crypto: CryptoManager = None
     session_factory: async_sessionmaker = None
-    relay_url: str = "http:127.0.0.1:8000"
-    current_page: str = "login"
-    contacts_list: list[Contact] = []
+    relay_url: str = "http://127.0.0.1:8000"
 
     def clear(self):
         """Полная очистка при выходе (Log out)"""
