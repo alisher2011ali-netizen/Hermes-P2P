@@ -261,7 +261,7 @@ class UIRouter:
             hint_text="Сообщение...", expand=True, shift_enter=True
         )
 
-        async def on_send_click(e):
+        async def on_send_click(e, message_input: ft.TextField):
             text = message_input.value
             if not text:
                 return
