@@ -41,7 +41,7 @@ class CryptoManager:
 
         return encrypted.ciphertext, nonce
 
-    def decrypt_from(
+    def decrypt_data(
         self, sender_public_key_bytes: bytes, ciphertext: bytes, nonce: bytes
     ) -> str:
         """Расшифровывает входящее сообщение."""

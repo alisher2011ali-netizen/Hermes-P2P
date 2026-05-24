@@ -256,3 +256,68 @@ async def create_message_widjet(
         ],
         alignment=alignment,
     )
+
+
+async def create_messages_widgets(c: Contact) -> list[ft.Row]:
+    async with state.session_factory() as session:
+        messages_list = await messages.get_messages_by_contact_id(session, c.id)
+    message_widgets = []
+    for m in messages_list:
+        text = state.crypto.decrypt_data(m.payload, m.nonce)
+        widget = await create_message_widjet(text, m.is_outbox)
+        message_widgets.append(widget)
+
+    return message_widgets
+
+
+def create_message_container_content(c: Contact, on_send_click, messages_widgets):
+    avatar = ft.CircleAvatar(
+        content=ft.Text(c.name[0].upper(), color=ft.Colors.WHITE),
+        bgcolor=ft.Colors.BLUE_GREY_400,
+    )
+
+    if c.is_online:
+        avatar = ft.Stack(
+            [
+                avatar,
+                ft.Container(
+                    width=18,
+                    height=18,
+                    bgcolor=ft.Colors.GREEN_500,
+                    border_radius=6,
+                    border=ft.border.all(2, ft.Colors.SURFACE),
+                    alignment=ft.alignment.bottom_right,
+                    bottom=0,
+                    right=0,
+                ),
+            ]
+        )
+
+    message_input = ft.TextField(
+        hint_text="Сообщение...", expand=True, shift_enter=True
+    )
+
+    return ft.Column(
+        [
+            ft.Container(
+                ft.Row(
+                    controls=[avatar, ft.Text(f"{c.name}", weight="bold", size=18)],
+                    spacing=10,
+                ),
+                padding=ft.padding.only(left=15, top=5),
+            ),
+            ft.Divider(),
+            ft.ListView(
+                controls=messages_widgets, expand=True, spacing=10, auto_scroll=True
+            ),
+            ft.Container(
+                ft.Row(
+                    [
+                        message_input,
+                        ft.IconButton(ft.Icons.SEND, on_click=on_send_click),
+                    ]
+                ),
+                padding=ft.padding.only(left=5, right=5),
+            ),
+        ]
+    )

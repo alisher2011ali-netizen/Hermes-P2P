@@ -85,6 +85,7 @@ class UIRouter:
 
     async def get_login_view(self):
         """Get the object of class View for login screen."""
+        self.login_container.controls.clear()
 
         async def show_password_dialog(name: str):
             """The method for inputting password."""
@@ -103,7 +104,7 @@ class UIRouter:
                 container=self.login_container,
                 name=name,
                 on_confirm=confirm_login,
-                on_back=lambda _: self.page.go("/"),
+                on_back=lambda _: asyncio.create_task(self.get_login_view()),
             )
             self.page.update()
 
@@ -172,7 +173,7 @@ class UIRouter:
 
             if msg_type == "TEXT":
                 try:
-                    display_text = state.crypto.decrypt_from(
+                    display_text = state.crypto.decrypt_data(
                         sender_public_key_bytes=contact.public_key,
                         ciphertext=payload,
                         nonce=nonce,
@@ -192,7 +193,7 @@ class UIRouter:
             )
 
             tile.on_click = lambda _, c=contact: asyncio.create_task(
-                self.load_chat_history(c)
+                self.get_chat_history_view(c)
             )
             chat_list_container.controls.append(tile)
 
@@ -218,85 +219,31 @@ class UIRouter:
             message_view_container=self.message_view_container,
         )
 
-    async def load_chat_history(self, contact: Contact):
+    async def get_chat_history_view(self, contact: Contact):
         self.current_chat_contact = contact
         self.message_view_container.content = ft.ProgressBar(width=200, color="blue")
         self.page.update()
 
-        async with state.session_factory() as session:
-            messages = await messages_repo.get_messages_by_contact_id(
-                session=session, contact_id=contact.id
-            )
+        messages_widgets = []
+        messages_widgets = await builder.create_messages_widgets()
 
-        messages_widjets = []
-        for msg in messages:
-            msg_widjet = await builder.create_message_widjet(
-                pubkey=contact.public_key, msg=msg
-            )
-            messages_widjets.append(msg_widjet)
-
-        c = contact
-        avatar = ft.CircleAvatar(
-            content=ft.Text(c.name[0].upper(), color=ft.Colors.WHITE),
-            bgcolor=ft.Colors.BLUE_GREY_400,
-        )
-
-        if c.is_online:
-            avatar = ft.Stack(
-                [
-                    avatar,
-                    ft.Container(
-                        width=18,
-                        height=18,
-                        bgcolor=ft.Colors.GREEN_500,
-                        border_radius=6,
-                        border=ft.border.all(2, ft.Colors.SURFACE),
-                        alignment=ft.alignment.bottom_right,
-                        bottom=0,
-                        right=0,
-                    ),
-                ]
-            )
-        message_input = ft.TextField(
-            hint_text="Сообщение...", expand=True, shift_enter=True
-        )
-
-        async def on_send_click(e, message_input: ft.TextField):
+        async def handle_send_click(e, message_input: ft.TextField):
             text = message_input.value
             if not text:
                 return
 
-            await MessageService.send_message(contact_id=c.id, text=text)
+            await MessageService.send_message(contact_id=contact.id, text=text)
 
             message_input.value = ""
             new_widget = await builder.create_message_widjet(text, is_outbox=True)
-            messages_widjets.append(new_widget)
+            messages_widgets.append(new_widget)
 
             self.page.update()
 
-        self.message_view_container.content = ft.Column(
-            [
-                ft.Container(
-                    ft.Row(
-                        controls=[avatar, ft.Text(f"{c.name}", weight="bold", size=18)],
-                        spacing=10,
-                    ),
-                    padding=ft.padding.only(left=15, top=5),
-                ),
-                ft.Divider(),
-                ft.ListView(
-                    controls=messages_widjets, expand=True, spacing=10, auto_scroll=True
-                ),
-                ft.Container(
-                    ft.Row(
-                        [
-                            message_input,
-                            ft.IconButton(ft.Icons.SEND, on_click=on_send_click),
-                        ]
-                    ),
-                    padding=ft.padding.only(left=5, right=5),
-                ),
-            ]
+        self.message_view_container.content = builder.create_message_container_content(
+            contact,
+            on_send_click=handle_send_click,
+            messages_widgets=messages_widgets,
         )
 
         self.page.update()
